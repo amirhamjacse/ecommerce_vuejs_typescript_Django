@@ -395,6 +395,10 @@ const formatPrice = (amount: number): string => {
   return `BDT ${Math.round(amount).toLocaleString('en-BD')}`
 }
 
+const formatTaka = (amount: number): string => {
+  return `৳${amount.toFixed(2)}`
+}
+
 const buildCartId = (name: string): string => {
   return name.trim().toLowerCase()
 }
@@ -640,11 +644,45 @@ const topSellingThumb = 'h-52 w-full object-cover transition duration-300 group-
 
     <header class="rise-in rise-in-delay-1 sticky top-3 z-20 mt-3 overflow-hidden rounded-2xl border border-slate-200/80 bg-white/95 shadow-[0_14px_30px_rgba(15,23,42,0.1)] backdrop-blur-xl">
       <div class="flex flex-wrap items-center justify-between gap-3 border-b border-slate-100 px-4 py-2 text-xs text-slate-600 md:text-sm">
-        <p>Hotline +880 1700 000000 | support@bazarbd.com</p>
+        <p class="inline-flex flex-wrap items-center gap-2">
+          <span class="inline-flex items-center gap-1.5">
+            <svg class="h-3.5 w-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <path d="M22 16.9v3a2 2 0 0 1-2.2 2 19.8 19.8 0 0 1-8.6-3.1 19.5 19.5 0 0 1-6-6A19.8 19.8 0 0 1 2.1 4.2 2 2 0 0 1 4.1 2h3a2 2 0 0 1 2 1.7 12.8 12.8 0 0 0 .7 2.8 2 2 0 0 1-.5 2.1L8 10a16 16 0 0 0 6 6l1.4-1.3a2 2 0 0 1 2.1-.5 12.8 12.8 0 0 0 2.8.7A2 2 0 0 1 22 16.9z" />
+            </svg>
+            <span>Hotline +880 1700 000000</span>
+          </span>
+          <span class="text-slate-300">|</span>
+          <span class="inline-flex items-center gap-1.5">
+            <svg class="h-3.5 w-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <rect x="3" y="5" width="18" height="14" rx="2" />
+              <path d="m3 7 9 6 9-6" />
+            </svg>
+            <span>support@bazarbd.com</span>
+          </span>
+        </p>
         <div class="flex items-center gap-3">
-          <a class="hover:text-brand" href="#">Track Order</a>
-          <a class="hover:text-brand" href="#">My Account</a>
-          <a class="hover:text-brand" href="#">Support</a>
+          <a class="inline-flex items-center gap-1.5 hover:text-brand" href="#">
+            <svg class="h-3.5 w-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <path d="M3 7h18" />
+              <path d="M8 7V5a4 4 0 0 1 8 0v2" />
+              <rect x="3" y="7" width="18" height="13" rx="2" />
+              <path d="m9 14 2 2 4-4" />
+            </svg>
+            <span>Track Order</span>
+          </a>
+          <a class="inline-flex items-center gap-1.5 hover:text-brand" href="#">
+            <svg class="h-3.5 w-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <path d="M20 21a8 8 0 1 0-16 0" />
+              <circle cx="12" cy="7" r="4" />
+            </svg>
+            <span>My Account</span>
+          </a>
+          <a class="inline-flex items-center gap-1.5 hover:text-brand" href="#">
+            <svg class="h-3.5 w-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
+            </svg>
+            <span>Support</span>
+          </a>
         </div>
       </div>
 
@@ -666,15 +704,23 @@ const topSellingThumb = 'h-52 w-full object-cover transition duration-300 group-
         </div>
 
         <div class="ml-auto flex items-center gap-2 md:ml-0">
-          <button class="rounded-xl border border-slate-200 bg-white px-4 py-2 text-sm font-medium text-slate-700 hover:border-brand hover:text-brand" type="button">
-            Wishlist
+          <button class="inline-flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-2 text-sm font-medium text-slate-700 hover:border-brand hover:text-brand" type="button">
+            <svg class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <path d="M20.8 4.6a5.5 5.5 0 0 0-7.8 0L12 5.6l-1-1a5.5 5.5 0 0 0-7.8 7.8l1 1L12 21l7.8-7.6 1-1a5.5 5.5 0 0 0 0-7.8z" />
+            </svg>
+            <span>Wishlist</span>
           </button>
           <button
-            class="rounded-xl bg-accent px-4 py-2 text-sm font-semibold text-white shadow-sm hover:opacity-90"
+            class="inline-flex items-center gap-2 rounded-xl bg-brand px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-brand-dark"
             type="button"
             @click="openCart"
           >
-            Cart ({{ cartCount }}) {{ formatPrice(cartSubtotal) }}
+            <svg class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <circle cx="9" cy="20" r="1" />
+              <circle cx="17" cy="20" r="1" />
+              <path d="M5 5h2l2 10h9l2-7H8" />
+            </svg>
+            <span>Cart ({{ cartCount }}) {{ formatPrice(cartSubtotal) }}</span>
           </button>
         </div>
       </div>
@@ -1240,6 +1286,37 @@ const topSellingThumb = 'h-52 w-full object-cover transition duration-300 group-
         </div>
       </div>
     </footer>
+
+    <button
+      type="button"
+      class="fixed right-0 top-1/2 z-30 flex w-[84px] -translate-y-1/2 flex-col overflow-hidden rounded-l-2xl border border-r-0 border-brand/35 bg-brand text-white shadow-[-8px_12px_22px_rgba(0,0,0,0.18)] transition duration-300 hover:bg-brand-dark"
+      :class="isCartOpen ? 'pointer-events-none opacity-0' : 'pointer-events-auto opacity-100'"
+      aria-label="Open cart"
+      @click="openCart"
+    >
+      <div class="flex min-h-[86px] flex-col items-center justify-center px-2 py-2">
+        <svg
+          class="h-6 w-6"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="2"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+          aria-hidden="true"
+        >
+          <path d="M6 8h12l-1 12H7L6 8z" />
+          <path d="M9 8V6a3 3 0 1 1 6 0v2" />
+        </svg>
+        <div class="mt-1 text-center text-sm leading-tight">
+          <span class="font-bold">{{ cartCount }}</span>
+          <span class="ml-1">Items</span>
+        </div>
+      </div>
+      <p class="w-full bg-white px-1 py-2 text-center text-sm font-bold leading-none text-brand">
+        {{ formatTaka(cartSubtotal) }}
+      </p>
+    </button>
 
     <button
       type="button"
