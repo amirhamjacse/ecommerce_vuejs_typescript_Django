@@ -10,6 +10,20 @@ type Product = {
   badge?: string
 }
 
+type CartProduct = {
+  name: string
+  price: string
+  image: string
+}
+
+type CartItem = {
+  id: string
+  name: string
+  image: string
+  unitPrice: number
+  qty: number
+}
+
 const carouselPosters = [
   {
     title: 'Fresh groceries delivered fast across Bangladesh',
@@ -372,6 +386,84 @@ const currentPoster = computed(() => {
   return carouselPosters[activePoster.value] ?? carouselPosters[0] ?? defaultPoster
 })
 
+const parsePrice = (priceText: string): number => {
+  const numericValue = Number(priceText.replace(/[^0-9.]/g, ''))
+  return Number.isFinite(numericValue) ? numericValue : 0
+}
+
+const formatPrice = (amount: number): string => {
+  return `BDT ${Math.round(amount).toLocaleString('en-BD')}`
+}
+
+const buildCartId = (name: string): string => {
+  return name.trim().toLowerCase()
+}
+
+const isCartOpen = ref(false)
+const cartItems = ref<CartItem[]>([])
+
+const cartCount = computed(() => {
+  return cartItems.value.reduce((total, item) => total + item.qty, 0)
+})
+
+const cartSubtotal = computed(() => {
+  return cartItems.value.reduce((total, item) => total + item.unitPrice * item.qty, 0)
+})
+
+const openCart = () => {
+  isCartOpen.value = true
+}
+
+const closeCart = () => {
+  isCartOpen.value = false
+}
+
+const addToCart = (item: CartProduct) => {
+  const id = buildCartId(item.name)
+  const existing = cartItems.value.find((cartItem) => cartItem.id === id)
+  if (existing) {
+    existing.qty += 1
+    return
+  }
+
+  cartItems.value.unshift({
+    id,
+    name: item.name,
+    image: item.image,
+    unitPrice: parsePrice(item.price),
+    qty: 1,
+  })
+}
+
+const incrementCartItem = (id: string) => {
+  const item = cartItems.value.find((cartItem) => cartItem.id === id)
+  if (!item) return
+  item.qty += 1
+}
+
+const decrementCartItem = (id: string) => {
+  const item = cartItems.value.find((cartItem) => cartItem.id === id)
+  if (!item) return
+  if (item.qty <= 1) {
+    cartItems.value = cartItems.value.filter((cartItem) => cartItem.id !== id)
+    return
+  }
+  item.qty -= 1
+}
+
+const removeCartItem = (id: string) => {
+  cartItems.value = cartItems.value.filter((cartItem) => cartItem.id !== id)
+}
+
+const clearCart = () => {
+  cartItems.value = []
+}
+
+const buyNow = (item: CartProduct) => {
+  addToCart(item)
+  openCart()
+}
+
 const buildSlideWindows = <T>(items: T[], size: number): T[][] => {
   if (!items.length) return []
 
@@ -577,8 +669,12 @@ const topSellingThumb = 'h-52 w-full object-cover transition duration-300 group-
           <button class="rounded-xl border border-slate-200 bg-white px-4 py-2 text-sm font-medium text-slate-700 hover:border-brand hover:text-brand" type="button">
             Wishlist
           </button>
-          <button class="rounded-xl bg-accent px-4 py-2 text-sm font-semibold text-white shadow-sm hover:opacity-90" type="button">
-            Cart BDT 1,280
+          <button
+            class="rounded-xl bg-accent px-4 py-2 text-sm font-semibold text-white shadow-sm hover:opacity-90"
+            type="button"
+            @click="openCart"
+          >
+            Cart ({{ cartCount }}) {{ formatPrice(cartSubtotal) }}
           </button>
         </div>
       </div>
@@ -591,6 +687,110 @@ const topSellingThumb = 'h-52 w-full object-cover transition duration-300 group-
         <a class="rounded-md px-3 py-1.5 hover:bg-slate-100" href="#">Popular Brands</a>
       </nav>
     </header>
+
+    <button
+      v-if="isCartOpen"
+      type="button"
+      class="fixed inset-0 z-30 bg-slate-900/40"
+      aria-label="Close cart"
+      @click="closeCart"
+    ></button>
+
+    <aside
+      class="fixed right-0 top-0 z-40 flex h-screen w-full max-w-md flex-col border-l border-slate-200 bg-white shadow-2xl transition-transform duration-300"
+      :class="isCartOpen ? 'translate-x-0' : 'translate-x-full'"
+      aria-label="Shopping cart"
+    >
+      <div class="flex items-center justify-between border-b border-slate-100 px-5 py-4">
+        <div>
+          <p class="text-xs font-semibold uppercase tracking-wide text-slate-500">Cart Summary</p>
+          <h3 class="text-lg font-semibold text-ink">Your Cart ({{ cartCount }})</h3>
+        </div>
+        <button
+          type="button"
+          class="rounded-lg border border-slate-200 px-3 py-2 text-sm font-semibold text-slate-700 hover:border-brand hover:text-brand"
+          @click="closeCart"
+        >
+          Close
+        </button>
+      </div>
+
+      <div class="flex-1 overflow-y-auto px-5 py-4">
+        <div v-if="!cartItems.length" class="rounded-xl border border-dashed border-slate-300 bg-slate-50 p-5 text-center">
+          <p class="text-sm font-medium text-slate-600">Your cart is empty.</p>
+          <p class="mt-1 text-xs text-slate-500">Add products from the cards to see them here.</p>
+        </div>
+
+        <div v-else class="space-y-3">
+          <article
+            v-for="item in cartItems"
+            :key="item.id"
+            class="rounded-xl border border-slate-200 p-3"
+          >
+            <div class="flex gap-3">
+              <img :src="item.image" :alt="item.name" class="h-14 w-14 rounded-lg object-cover" loading="lazy" />
+              <div class="min-w-0 flex-1">
+                <p class="line-clamp-2 text-sm font-semibold text-ink">{{ item.name }}</p>
+                <p class="text-xs text-slate-500">{{ formatPrice(item.unitPrice) }} each</p>
+                <p class="mt-1 text-sm font-semibold text-brand">{{ formatPrice(item.unitPrice * item.qty) }}</p>
+              </div>
+            </div>
+
+            <div class="mt-3 flex items-center justify-between">
+              <div class="inline-flex items-center overflow-hidden rounded-lg border border-slate-200">
+                <button
+                  type="button"
+                  class="h-8 w-8 text-sm font-semibold text-slate-700 hover:bg-slate-100"
+                  @click="decrementCartItem(item.id)"
+                >
+                  -
+                </button>
+                <span class="inline-flex h-8 min-w-9 items-center justify-center border-x border-slate-200 text-sm font-semibold text-slate-700">{{ item.qty }}</span>
+                <button
+                  type="button"
+                  class="h-8 w-8 text-sm font-semibold text-slate-700 hover:bg-slate-100"
+                  @click="incrementCartItem(item.id)"
+                >
+                  +
+                </button>
+              </div>
+
+              <button
+                type="button"
+                class="text-xs font-semibold text-rose-600 hover:text-rose-700"
+                @click="removeCartItem(item.id)"
+              >
+                Remove
+              </button>
+            </div>
+          </article>
+        </div>
+      </div>
+
+      <div class="border-t border-slate-100 px-5 py-4">
+        <div class="mb-3 flex items-center justify-between text-sm">
+          <span class="font-medium text-slate-600">Subtotal</span>
+          <span class="text-lg font-bold text-ink">{{ formatPrice(cartSubtotal) }}</span>
+        </div>
+        <div class="grid grid-cols-2 gap-2">
+          <button
+            type="button"
+            class="rounded-xl border border-slate-200 px-3 py-2.5 text-sm font-semibold text-slate-700 hover:border-brand hover:text-brand disabled:cursor-not-allowed disabled:opacity-50"
+            :disabled="!cartItems.length"
+            @click="clearCart"
+          >
+            Clear cart
+          </button>
+          <button
+            type="button"
+            class="rounded-xl bg-brand px-3 py-2.5 text-sm font-semibold text-white hover:bg-brand-dark disabled:cursor-not-allowed disabled:opacity-50"
+            :disabled="!cartItems.length"
+          >
+            Checkout
+          </button>
+        </div>
+      </div>
+    </aside>
 
     <main class="mt-6 space-y-6 md:space-y-7">
       <section class="rise-in grid grid-cols-1 gap-3 md:gap-5 lg:grid-cols-[70%_30%]">
@@ -750,7 +950,7 @@ const topSellingThumb = 'h-52 w-full object-cover transition duration-300 group-
                       <span class="text-lg font-bold text-amber-700">{{ item.price }}</span>
                       <span class="text-sm text-slate-400 line-through">{{ item.oldPrice }}</span>
                     </div>
-                    <button class="mt-4 w-full rounded-xl bg-amber-600 px-3 py-2.5 text-sm font-semibold text-white hover:bg-amber-700" type="button">
+                    <button class="mt-4 w-full rounded-xl bg-amber-600 px-3 py-2.5 text-sm font-semibold text-white hover:bg-amber-700" type="button" @click="addToCart(item)">
                       Add to cart
                     </button>
                   </div>
@@ -835,10 +1035,11 @@ const topSellingThumb = 'h-52 w-full object-cover transition duration-300 group-
                       <button
                         class="rounded-xl border border-emerald-200 px-3 py-2.5 text-sm font-semibold text-emerald-700 transition hover:border-emerald-500"
                         type="button"
+                        @click="addToCart(item)"
                       >
                         Add To Cart
                       </button>
-                      <button class="rounded-xl bg-emerald-600 px-3 py-2.5 text-sm font-semibold text-white hover:bg-emerald-700" type="button">
+                      <button class="rounded-xl bg-emerald-600 px-3 py-2.5 text-sm font-semibold text-white hover:bg-emerald-700" type="button" @click="buyNow(item)">
                         Buy now
                       </button>
                     </div>
@@ -915,7 +1116,7 @@ const topSellingThumb = 'h-52 w-full object-cover transition duration-300 group-
                 <span class="text-base font-bold text-brand">{{ item.price }}</span>
                 <span class="text-xs text-slate-400 line-through">{{ item.oldPrice }}</span>
               </div>
-              <button :class="productBtn" type="button">Add to cart</button>
+              <button :class="productBtn" type="button" @click="addToCart(item)">Add to cart</button>
             </div>
           </article>
         </div>
