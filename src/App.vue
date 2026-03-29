@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
+import ProductListPage from './components/ProductListPage.vue'
 
 type Product = {
   name: string
@@ -546,6 +547,10 @@ const allProducts = computed(() => {
 
 const isDetailPageShown = computed(() => {
   return route.name === 'product-detail'
+})
+
+const isProductsListPageShown = computed(() => {
+  return route.name === 'products-list'
 })
 
 const routeProductName = computed(() => {
@@ -1261,7 +1266,11 @@ const topSellingThumb = 'h-52 w-full object-cover transition duration-300 group-
       </div>
     </aside>
 
-    <main v-if="isProductDetailOpen && selectedProduct" class="mt-6 space-y-6 md:space-y-7">
+    <main v-if="isProductsListPageShown" class="mt-6">
+      <ProductListPage />
+    </main>
+
+    <main v-else-if="isProductDetailOpen && selectedProduct" class="mt-6 space-y-6 md:space-y-7">
       <section class="surface-card p-4 md:p-6">
         <button
           type="button"
@@ -1644,7 +1653,7 @@ const topSellingThumb = 'h-52 w-full object-cover transition duration-300 group-
             <p class="text-xs font-semibold uppercase tracking-wide text-brand">Featured Categories</p>
             <h2 class="text-2xl font-semibold">Shop by featured category</h2>
           </div>
-          <a class="text-sm font-medium text-brand hover:underline" href="#">See all categories</a>
+          <RouterLink to="/products" class="text-sm font-medium text-brand hover:underline">See all categories</RouterLink>
         </div>
 
         <div class="grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 xl:grid-cols-11">
@@ -1671,9 +1680,9 @@ const topSellingThumb = 'h-52 w-full object-cover transition duration-300 group-
             <p class="text-xs font-semibold uppercase tracking-wide text-amber-700">Flash Sale</p>
             <h2 class="text-2xl font-semibold">Limited time offers</h2>
           </div>
-          <button class="rounded-lg border border-amber-200 bg-white px-3 py-2 text-sm font-semibold text-amber-700 hover:border-amber-400" type="button">
+          <RouterLink to="/products" class="inline-flex rounded-lg border border-amber-200 bg-white px-3 py-2 text-sm font-semibold text-amber-700 hover:border-amber-400">
             View all deals
-          </button>
+          </RouterLink>
         </div>
 
         <div
@@ -1776,6 +1785,7 @@ const topSellingThumb = 'h-52 w-full object-cover transition duration-300 group-
           <div>
             <p class="text-xs font-semibold uppercase tracking-wide text-emerald-700">Top Selling Products</p>
             <h2 class="text-2xl font-semibold">Top Selling Products</h2>
+                    <RouterLink to="/products" class="text-sm font-medium text-brand hover:underline">See all</RouterLink>
           </div>
         </div>
 
@@ -1909,7 +1919,7 @@ const topSellingThumb = 'h-52 w-full object-cover transition duration-300 group-
       <section class="surface-card rise-in rise-in-delay-2 p-4 md:p-5">
         <div class="mb-4 flex items-center justify-between">
           <h2 class="text-2xl font-semibold">Popular Products</h2>
-          <a class="text-sm font-medium text-brand hover:underline" href="#">See all</a>
+          <RouterLink to="/products" class="text-sm font-medium text-brand hover:underline">See all</RouterLink>
         </div>
 
         <div class="mb-4 flex flex-wrap gap-2">

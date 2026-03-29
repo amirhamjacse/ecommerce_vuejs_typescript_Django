@@ -15,6 +15,11 @@ const routes: RouteRecordRaw[] = [
     component: App,
     meta: { showDetail: true },
   },
+  {
+    path: '/products',
+    name: 'products-list',
+    component: App,
+  },
 ]
 
 const router = createRouter({
