@@ -345,9 +345,20 @@ const clampPrice = (value: number): number => {
   return Math.round(value)
 }
 
+const parsePriceInput = (value: string): number => {
+  const sanitized = value.replace(/[^0-9.]/g, '')
+  return clampPrice(Number(sanitized))
+}
+
+const formatBdt = (value: number): string => {
+  return new Intl.NumberFormat('en-BD', {
+    maximumFractionDigits: 0,
+  }).format(value)
+}
+
 const applyPriceRange = () => {
-  const parsedMin = clampPrice(Number(minPriceInput.value))
-  const parsedMax = clampPrice(Number(maxPriceInput.value))
+  const parsedMin = parsePriceInput(minPriceInput.value)
+  const parsedMax = parsePriceInput(maxPriceInput.value)
 
   if (parsedMin <= parsedMax) {
     priceRangeMin.value = parsedMin
@@ -562,30 +573,38 @@ const addToCartFromList = (product: Product) => {
             <div class="border-t border-slate-200 pt-4">
               <h3 class="mb-3 text-sm font-semibold text-slate-900">Price Range</h3>
               <div class="space-y-3">
-                <div class="flex gap-2">
-                  <input
-                    v-model="minPriceInput"
-                    type="number"
-                    placeholder="Min"
-                    class="flex-1 rounded-lg border border-slate-200 px-2 py-1.5 text-sm focus:border-brand focus:outline-none"
-                  />
-                  <span class="flex items-center text-slate-500">-</span>
-                  <input
-                    v-model="maxPriceInput"
-                    type="number"
-                    placeholder="Max"
-                    class="flex-1 rounded-lg border border-slate-200 px-2 py-1.5 text-sm focus:border-brand focus:outline-none"
-                  />
+                <div class="rounded-xl border border-slate-200 bg-slate-50/70 p-3">
+                  <div class="grid grid-cols-[1fr_auto_1fr] items-center gap-2">
+                    <input
+                      v-model="minPriceInput"
+                      type="number"
+                      min="0"
+                      step="1"
+                      inputmode="numeric"
+                      placeholder="0"
+                      class="min-w-0 rounded-lg border border-slate-200 bg-white px-2 py-2 text-sm focus:border-brand focus:outline-none"
+                    />
+                    <span class="text-slate-500">-</span>
+                    <input
+                      v-model="maxPriceInput"
+                      type="number"
+                      min="0"
+                      step="1"
+                      inputmode="numeric"
+                      placeholder="5000"
+                      class="min-w-0 rounded-lg border border-slate-200 bg-white px-2 py-2 text-sm focus:border-brand focus:outline-none"
+                    />
+                  </div>
                   <button
                     type="button"
-                    class="rounded-lg bg-brand px-3 py-1.5 text-xs font-semibold text-white hover:bg-brand-dark"
+                    class="mt-2 w-full rounded-lg bg-brand px-3 py-2 text-xs font-semibold text-white hover:bg-brand-dark"
                     @click="applyPriceRange"
                   >
                     Go
                   </button>
                 </div>
-                <p class="text-xs text-slate-500">
-                  BDT {{ priceRangeMin.toLocaleString() }} - BDT {{ priceRangeMax.toLocaleString() }}
+                <p class="text-xs font-medium text-slate-600">
+                  BDT {{ formatBdt(priceRangeMin) }} - BDT {{ formatBdt(priceRangeMax) }}
                 </p>
               </div>
             </div>
