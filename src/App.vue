@@ -3,6 +3,11 @@ import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import ProductListPage from './components/ProductListPage.vue'
 import RelatedProductsCarousel from './components/RelatedProductsCarousel.vue'
+import LoginPage from './components/LoginPage.vue'
+import SignupPage from './components/SignupPage.vue'
+import UserProfilePage from './components/UserProfilePage.vue'
+import AdminDashboardPage from './components/AdminDashboardPage.vue'
+import CheckoutPage from './components/CheckoutPage.vue'
 
 type Product = {
   name: string
@@ -59,6 +64,14 @@ type ProductReview = {
   rating: number
   comment: string
   date: string
+}
+
+type UserRole = 'customer' | 'admin'
+
+type UserSession = {
+  name: string
+  email: string
+  role: UserRole
 }
 
 const route = useRoute()
@@ -143,6 +156,12 @@ const handleVisibilityChange = () => {
 }
 
 const showBackToTop = ref(false)
+const sessionStorageKey = 'bazarpro-user-session'
+
+const currentUser = ref<UserSession | null>(null)
+
+const isLoggedIn = computed(() => currentUser.value !== null)
+const isAdminUser = computed(() => currentUser.value?.role === 'admin')
 
 const handlePageScroll = () => {
   showBackToTop.value = window.scrollY > 320
@@ -159,6 +178,18 @@ onMounted(() => {
   document.addEventListener('visibilitychange', handleVisibilityChange)
   window.addEventListener('scroll', handlePageScroll, { passive: true })
   handlePageScroll()
+
+  const rawSession = localStorage.getItem(sessionStorageKey)
+  if (!rawSession) return
+
+  try {
+    const parsedSession = JSON.parse(rawSession) as UserSession
+    if (parsedSession?.email && parsedSession?.name && parsedSession?.role) {
+      currentUser.value = parsedSession
+    }
+  } catch {
+    localStorage.removeItem(sessionStorageKey)
+  }
 })
 
 onUnmounted(() => {
@@ -609,6 +640,26 @@ const isProductsListPageShown = computed(() => {
   return route.name === 'products-list'
 })
 
+const isLoginPageShown = computed(() => {
+  return route.name === 'login'
+})
+
+const isSignupPageShown = computed(() => {
+  return route.name === 'signup'
+})
+
+const isProfilePageShown = computed(() => {
+  return route.name === 'profile'
+})
+
+const isAdminPageShown = computed(() => {
+  return route.name === 'admin-dashboard'
+})
+
+const isCheckoutPageShown = computed(() => {
+  return route.name === 'checkout'
+})
+
 const routeProductSlug = computed(() => {
   const param = route.params.productName
   return typeof param === 'string' ? param : null
@@ -674,6 +725,63 @@ const openCart = () => {
   isCartOpen.value = true
 }
 
+const goToLogin = () => {
+  closeWishlist()
+  closeCart()
+  router.push({ name: 'login' })
+}
+
+const goToSignup = () => {
+  closeWishlist()
+  closeCart()
+  router.push({ name: 'signup' })
+}
+
+const goToProfile = () => {
+  if (!isLoggedIn.value) {
+    goToLogin()
+    return
+  }
+  closeWishlist()
+  closeCart()
+  router.push({ name: 'profile' })
+}
+
+const goToAdminDashboard = () => {
+  if (!isLoggedIn.value) {
+    goToLogin()
+    return
+  }
+
+  if (!isAdminUser.value) {
+    triggerToast('Admin access required for dashboard', 'warning')
+    return
+  }
+
+  closeWishlist()
+  closeCart()
+  router.push({ name: 'admin-dashboard' })
+}
+
+const handleAuthSuccess = (payload: UserSession) => {
+  currentUser.value = {
+    name: payload.name.trim(),
+    email: payload.email.trim(),
+    role: payload.role,
+  }
+  localStorage.setItem(sessionStorageKey, JSON.stringify(currentUser.value))
+  triggerToast(`Welcome ${currentUser.value.name}`, 'success')
+  router.push({ name: 'home' })
+}
+
+const logout = () => {
+  const currentName = currentUser.value?.name ?? 'User'
+  currentUser.value = null
+  localStorage.removeItem(sessionStorageKey)
+  router.push({ name: 'home' })
+  triggerToast(`${currentName} logged out`, 'info')
+}
+
 const closeCart = () => {
   isCartOpen.value = false
 }
@@ -685,6 +793,12 @@ const openWishlist = () => {
 
 const closeWishlist = () => {
   isWishlistOpen.value = false
+}
+
+const goToCheckout = () => {
+  if (!cartItems.value.length) return
+  closeCart()
+  router.push({ name: 'checkout' })
 }
 
 const openProductDetail = (item: ProductPreview) => {
@@ -894,6 +1008,16 @@ const clearCart = () => {
   cartItems.value = []
 }
 
+const placeOrderFromCheckout = () => {
+  if (!cartItems.value.length) {
+    triggerToast('Your cart is empty', 'warning')
+    return
+  }
+  clearCart()
+  triggerToast('Order placed successfully', 'success')
+  router.push({ name: 'home' })
+}
+
 const buyNow = (item: CartProduct) => {
   addToCart(item)
   openCart()
@@ -1067,9 +1191,9 @@ const topSellingThumb = 'h-52 w-full object-cover transition duration-300 group-
 </script>
 
 <template>
-  <div class="relative mx-auto max-w-[1500px] overflow-hidden px-2 py-4 md:px-3 lg:px-4">
+  <div :class="isAdminPageShown ? 'relative min-h-screen w-full overflow-hidden bg-slate-100 px-0 py-0' : 'relative mx-auto max-w-[1500px] overflow-hidden px-2 py-4 md:px-3 lg:px-4'">
 
-    <header class="rise-in rise-in-delay-1 sticky top-3 z-20 mt-3 overflow-hidden rounded-2xl border border-slate-200/80 bg-white/95 shadow-[0_14px_30px_rgba(15,23,42,0.1)] backdrop-blur-xl">
+    <header v-if="!isAdminPageShown" class="rise-in rise-in-delay-1 sticky top-3 z-20 mt-3 overflow-hidden rounded-2xl border border-slate-200/80 bg-white/95 shadow-[0_14px_30px_rgba(15,23,42,0.1)] backdrop-blur-xl">
       <div class="flex flex-wrap items-center justify-between gap-3 border-b border-slate-100 px-4 py-2 text-xs text-slate-600 md:text-sm">
         <p class="inline-flex flex-wrap items-center gap-2">
           <span class="inline-flex items-center gap-1.5">
@@ -1097,13 +1221,13 @@ const topSellingThumb = 'h-52 w-full object-cover transition duration-300 group-
             </svg>
             <span>Track Order</span>
           </a>
-          <a class="inline-flex items-center gap-1.5 hover:text-brand" href="#">
+          <button class="inline-flex items-center gap-1.5 hover:text-brand" type="button" @click="goToProfile">
             <svg class="h-3.5 w-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
               <path d="M20 21a8 8 0 1 0-16 0" />
               <circle cx="12" cy="7" r="4" />
             </svg>
-            <span>My Account</span>
-          </a>
+            <span>My Profile</span>
+          </button>
           <a class="inline-flex items-center gap-1.5 hover:text-brand" href="#">
             <svg class="h-3.5 w-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
               <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
@@ -1131,11 +1255,36 @@ const topSellingThumb = 'h-52 w-full object-cover transition duration-300 group-
         </div>
 
         <div class="ml-auto flex items-center gap-2 md:ml-0">
+          <button
+            class="inline-flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-2 text-sm font-medium text-slate-700 hover:border-brand hover:text-brand"
+            type="button"
+            @click="isLoggedIn ? goToProfile() : goToLogin()"
+          >
+            <svg class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <path d="M20 21a8 8 0 1 0-16 0" />
+              <circle cx="12" cy="7" r="4" />
+            </svg>
+            <span>{{ isLoggedIn ? 'Profile' : 'Login' }}</span>
+          </button>
           <button class="inline-flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-2 text-sm font-medium text-slate-700 hover:border-brand hover:text-brand" type="button" @click="openWishlist">
             <svg class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
               <path d="M20.8 4.6a5.5 5.5 0 0 0-7.8 0L12 5.6l-1-1a5.5 5.5 0 0 0-7.8 7.8l1 1L12 21l7.8-7.6 1-1a5.5 5.5 0 0 0 0-7.8z" />
             </svg>
             <span>Wishlist ({{ wishlistCount }})</span>
+          </button>
+          <button
+            v-if="isLoggedIn"
+            class="inline-flex items-center gap-2 rounded-xl border border-indigo-200 bg-indigo-50 px-4 py-2 text-sm font-medium text-indigo-700 hover:border-indigo-400 hover:bg-indigo-100"
+            type="button"
+            @click="goToAdminDashboard"
+          >
+            <svg class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <path d="M12 3 4 7l8 4 8-4-8-4z" />
+              <path d="m4 7 8 4 8-4" />
+              <path d="M4 12l8 4 8-4" />
+              <path d="M4 17l8 4 8-4" />
+            </svg>
+            <span>Admin</span>
           </button>
           <button
             class="inline-flex items-center gap-2 rounded-xl bg-brand px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-brand-dark"
@@ -1162,7 +1311,7 @@ const topSellingThumb = 'h-52 w-full object-cover transition duration-300 group-
     </header>
 
     <button
-      v-if="isCartOpen || isWishlistOpen"
+      v-if="!isAdminPageShown && (isCartOpen || isWishlistOpen)"
       type="button"
       class="fixed inset-0 z-30 bg-slate-900/40"
       aria-label="Close panel"
@@ -1170,6 +1319,7 @@ const topSellingThumb = 'h-52 w-full object-cover transition duration-300 group-
     ></button>
 
     <aside
+      v-if="!isAdminPageShown"
       class="fixed right-0 top-0 z-40 flex h-screen w-full max-w-md flex-col border-l border-slate-200 bg-white shadow-2xl transition-transform duration-300"
       :class="isWishlistOpen ? 'translate-x-0' : 'translate-x-full'"
       aria-label="Wishlist"
@@ -1246,6 +1396,7 @@ const topSellingThumb = 'h-52 w-full object-cover transition duration-300 group-
     </aside>
 
     <aside
+      v-if="!isAdminPageShown"
       class="fixed right-0 top-0 z-40 flex h-screen w-full max-w-md flex-col border-l border-slate-200 bg-white shadow-2xl transition-transform duration-300"
       :class="isCartOpen ? 'translate-x-0' : 'translate-x-full'"
       aria-label="Shopping cart"
@@ -1340,6 +1491,7 @@ const topSellingThumb = 'h-52 w-full object-cover transition duration-300 group-
             type="button"
             class="rounded-xl bg-brand px-3 py-2.5 text-sm font-semibold text-white hover:bg-brand-dark disabled:cursor-not-allowed disabled:opacity-50"
             :disabled="!cartItems.length"
+            @click="goToCheckout"
           >
             Checkout
           </button>
@@ -1347,7 +1499,27 @@ const topSellingThumb = 'h-52 w-full object-cover transition duration-300 group-
       </div>
     </aside>
 
-    <main v-if="isProductsListPageShown" class="mt-6">
+    <main v-if="isLoginPageShown" class="mt-6">
+      <LoginPage @login="handleAuthSuccess" @go-signup="goToSignup" />
+    </main>
+
+    <main v-else-if="isSignupPageShown" class="mt-6">
+      <SignupPage @signup="handleAuthSuccess" @go-login="goToLogin" />
+    </main>
+
+    <main v-else-if="isProfilePageShown" class="mt-6">
+      <UserProfilePage :current-user="currentUser" :is-admin-user="isAdminUser" @logout="logout" @go-login="goToLogin" @go-admin="goToAdminDashboard" />
+    </main>
+
+    <main v-else-if="isAdminPageShown" class="mt-6">
+      <AdminDashboardPage :current-user="currentUser" :is-admin-user="isAdminUser" @go-login="goToLogin" />
+    </main>
+
+    <main v-else-if="isCheckoutPageShown" class="mt-6">
+      <CheckoutPage :cart-items="cartItems" :cart-subtotal="cartSubtotal" @place-order="placeOrderFromCheckout" @go-shopping="() => router.push({ name: 'home' })" />
+    </main>
+
+    <main v-else-if="isProductsListPageShown" class="mt-6">
       <ProductListPage :on-add-to-cart="addProductListItemToCart" />
     </main>
 
@@ -2191,7 +2363,7 @@ const topSellingThumb = 'h-52 w-full object-cover transition duration-300 group-
       </section>
     </main>
 
-    <footer class="mt-4 overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-md">
+    <footer v-if="!isAdminPageShown" class="mt-4 overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-md">
       <div class="grid gap-6 p-5 md:grid-cols-2 lg:grid-cols-3">
         <div>
           <h3 class="text-lg font-semibold">BazarPro</h3>
@@ -2231,6 +2403,7 @@ const topSellingThumb = 'h-52 w-full object-cover transition duration-300 group-
     </footer>
 
     <div
+      v-if="!isAdminPageShown"
       class="fixed left-1/2 top-6 z-50 inline-flex min-w-[280px] max-w-[90vw] -translate-x-1/2 items-center gap-2 rounded-xl border px-4 py-3 text-sm font-semibold shadow-2xl ring-2 transition duration-300"
       :class="[toastClass, showCartToast ? 'toast-pop pointer-events-auto opacity-100' : 'pointer-events-none -translate-y-2 opacity-0']"
       role="status"
@@ -2253,6 +2426,7 @@ const topSellingThumb = 'h-52 w-full object-cover transition duration-300 group-
     </div>
 
     <button
+      v-if="!isAdminPageShown"
       type="button"
       class="fixed right-0 top-1/2 z-30 flex w-[84px] -translate-y-1/2 flex-col overflow-hidden rounded-l-2xl border border-r-0 border-brand/35 bg-brand text-white shadow-[-8px_12px_22px_rgba(0,0,0,0.18)] transition duration-300 hover:bg-brand-dark"
       :class="[isCartOpen ? 'pointer-events-none opacity-0' : 'pointer-events-auto opacity-100', cartShake ? 'cart-tab-shake' : '']"
@@ -2284,6 +2458,7 @@ const topSellingThumb = 'h-52 w-full object-cover transition duration-300 group-
     </button>
 
     <button
+      v-if="!isAdminPageShown"
       type="button"
       class="fixed bottom-5 right-5 z-30 flex h-11 w-11 items-center justify-center rounded-full border border-brand/30 bg-white text-brand shadow-lg transition duration-300 hover:-translate-y-0.5 hover:border-brand hover:bg-brand hover:text-white"
       :class="showBackToTop ? 'pointer-events-auto opacity-100' : 'pointer-events-none opacity-0'"

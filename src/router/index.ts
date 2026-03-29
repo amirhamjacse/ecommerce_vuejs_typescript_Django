@@ -20,6 +20,31 @@ const routes: RouteRecordRaw[] = [
     name: 'products-list',
     component: App,
   },
+  {
+    path: '/login',
+    name: 'login',
+    component: App,
+  },
+  {
+    path: '/signup',
+    name: 'signup',
+    component: App,
+  },
+  {
+    path: '/profile',
+    name: 'profile',
+    component: App,
+  },
+  {
+    path: '/admin-dashboard',
+    name: 'admin-dashboard',
+    component: App,
+  },
+  {
+    path: '/checkout',
+    name: 'checkout',
+    component: App,
+  },
 ]
 
 const router = createRouter({
