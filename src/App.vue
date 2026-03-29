@@ -2,6 +2,7 @@
 import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import ProductListPage from './components/ProductListPage.vue'
+import RelatedProductsCarousel from './components/RelatedProductsCarousel.vue'
 
 type Product = {
   name: string
@@ -541,6 +542,21 @@ const allProducts = computed(() => {
   return [...flashSaleItems, ...topSellingProducts, ...popularItems]
 })
 
+const relatedProductPool = computed<ProductPreview[]>(() => {
+  return allProducts.value.map((product) => ({
+    name: product.name,
+    price: product.price,
+    image: product.image,
+    oldPrice: product.oldPrice,
+    category: 'category' in product ? product.category : 'Products',
+    badge: 'badge' in product ? product.badge : undefined,
+    images: 'images' in product ? product.images : undefined,
+    description: 'description' in product ? product.description : undefined,
+    keyFeatures: 'keyFeatures' in product ? product.keyFeatures : undefined,
+    usageIdeas: 'usageIdeas' in product ? product.usageIdeas : undefined,
+  }))
+})
+
 const isDetailPageShown = computed(() => {
   return route.name === 'product-detail'
 })
@@ -585,12 +601,15 @@ const currentProductFromRoute = computed(() => {
 })
 
 watch(
-  () => route.name,
-  (newRouteName) => {
+  () => [route.name, routeProductSlug.value],
+  ([newRouteName, newProductSlug]) => {
     if (newRouteName === 'product-detail') {
       selectedProduct.value = currentProductFromRoute.value
       isProductDetailOpen.value = true
-      window.scrollTo({ top: 0, behavior: 'smooth' })
+      // Trigger top scroll when switching between detail products.
+      if (newProductSlug) {
+        window.scrollTo({ top: 0, behavior: 'smooth' })
+      }
     } else {
       selectedProduct.value = null
       isProductDetailOpen.value = false
@@ -1293,8 +1312,14 @@ const topSellingThumb = 'h-52 w-full object-cover transition duration-300 group-
           </svg>
           Back to products
         </button>
+      </section>
 
-        <div class="mt-4 grid gap-5 md:grid-cols-[45%_55%]">
+      <!-- Main Content Grid: Left (all content) + Right (sidebar) -->
+      <div class="grid gap-5 lg:grid-cols-[1fr_320px]">
+        <!-- Left: All Sections -->
+        <div class="space-y-6 md:space-y-7">
+          <section class="rounded-2xl border border-slate-200 bg-white/95 p-4 shadow-sm ring-1 ring-slate-100 md:p-6">
+            <div class="mt-4 grid gap-5 md:grid-cols-[45%_55%]"> 
           <div>
             <div class="relative overflow-hidden rounded-2xl border border-slate-200 bg-slate-50">
               <img :src="currentDetailImage" :alt="selectedProduct.name" class="h-[300px] w-full object-cover md:h-[460px]" loading="lazy" />
@@ -1437,73 +1462,111 @@ const topSellingThumb = 'h-52 w-full object-cover transition duration-300 group-
         </div>
       </section>
 
-      <section class="space-y-4 md:space-y-6">
-        <div class="surface-card p-4 md:p-6">
-          <h3 class="text-2xl font-semibold text-ink">Product Description & Images</h3>
-          <p v-if="selectedProduct.description" class="mt-3 text-base leading-7 text-slate-700">{{ selectedProduct.description }}</p>
-          <p v-else class="mt-3 text-base leading-7 text-slate-700">Carefully selected quality product for daily use. Fresh stock, hygienic handling, and reliable delivery support across your city.</p>
+          <!-- Product Description & Images -->
+          <div class="rounded-2xl border border-slate-200 bg-white/95 p-4 shadow-sm ring-1 ring-slate-100 md:p-6">
+            <h3 class="text-2xl font-semibold text-ink">Product Description & Images</h3>
+            <p v-if="selectedProduct.description" class="mt-3 text-base leading-7 text-slate-700">{{ selectedProduct.description }}</p>
+            <p v-else class="mt-3 text-base leading-7 text-slate-700">Carefully selected quality product for daily use. Fresh stock, hygienic handling, and reliable delivery support across your city.</p>
 
-          <div v-if="selectedProduct.keyFeatures && selectedProduct.keyFeatures.length > 0" class="mt-5">
-            <h4 class="font-semibold text-ink">Key Features:</h4>
-            <ul class="mt-2 space-y-1.5 text-sm text-slate-700">
-              <li v-for="(feature, index) in selectedProduct.keyFeatures" :key="`key-feature-${index}`" class="flex items-start gap-2">
-                <span class="mt-1 h-1.5 w-1.5 shrink-0 rounded-full bg-brand"></span>
-                <span>{{ feature }}</span>
-              </li>
-            </ul>
-          </div>
-
-          <div v-if="selectedProduct.usageIdeas && selectedProduct.usageIdeas.length > 0" class="mt-5">
-            <h4 class="font-semibold text-ink">Usage Ideas:</h4>
-            <ul class="mt-2 space-y-1.5 text-sm text-slate-700">
-              <li v-for="(idea, index) in selectedProduct.usageIdeas" :key="`usage-idea-${index}`" class="flex items-start gap-2">
-                <span class="mt-1 h-1.5 w-1.5 shrink-0 rounded-full bg-emerald-600"></span>
-                <span>{{ idea }}</span>
-              </li>
-            </ul>
-          </div>
-        </div>
-
-        <div v-if="detailProductImages.length > 0" class="surface-card p-4 md:p-6">
-          <h3 class="text-xl font-semibold text-ink">Product Gallery</h3>
-          <div class="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-            <button
-              v-for="(image, index) in detailProductImages"
-              :key="`gallery-${index}`"
-              type="button"
-              class="group relative overflow-hidden rounded-lg border border-slate-200 transition hover:border-brand"
-              @click="openImageZoom(index)"
-            >
-              <img :src="image" :alt="`Product image ${index + 1}`" class="h-32 w-full object-cover transition group-hover:scale-105" loading="lazy" />
-              <div class="absolute inset-0 flex items-center justify-center bg-black/0 transition group-hover:bg-black/40">
-                <svg class="h-6 w-6 text-white opacity-0 transition group-hover:opacity-100" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-                  <circle cx="11" cy="11" r="8" />
-                  <path d="m21 21-4.35-4.35" />
-                  <path d="M11 8v6" />
-                  <path d="M8 11h6" />
-                </svg>
-              </div>
-            </button>
-          </div>
-        </div>
-      </section>
-
-      <section class="surface-card p-4 md:p-6">
-        <div class="mb-3 flex items-center justify-between gap-2">
-          <h3 class="text-xl font-semibold text-ink">Customer Reviews</h3>
-          <p class="text-sm text-slate-500">{{ selectedProductReviews.length }} reviews</p>
-        </div>
-        <div class="grid gap-3 md:grid-cols-3">
-          <article v-for="review in selectedProductReviews" :key="review.id" class="rounded-xl border border-slate-200 bg-white p-4">
-            <div class="flex items-center justify-between gap-2">
-              <p class="text-sm font-semibold text-ink">{{ review.name }}</p>
-              <p class="text-xs text-slate-500">{{ review.date }}</p>
+            <div v-if="selectedProduct.keyFeatures && selectedProduct.keyFeatures.length > 0" class="mt-5">
+              <h4 class="font-semibold text-ink">Key Features:</h4>
+              <ul class="mt-2 space-y-1.5 text-sm text-slate-700">
+                <li v-for="(feature, index) in selectedProduct.keyFeatures" :key="`key-feature-${index}`" class="flex items-start gap-2">
+                  <span class="mt-1 h-1.5 w-1.5 shrink-0 rounded-full bg-brand"></span>
+                  <span>{{ feature }}</span>
+                </li>
+              </ul>
             </div>
-            <p class="mt-1 text-sm text-amber-500">{{ '★'.repeat(review.rating) }}{{ '☆'.repeat(5 - review.rating) }}</p>
-            <p class="mt-2 text-sm leading-6 text-slate-600">{{ review.comment }}</p>
-          </article>
+
+            <div v-if="selectedProduct.usageIdeas && selectedProduct.usageIdeas.length > 0" class="mt-5">
+              <h4 class="font-semibold text-ink">Usage Ideas:</h4>
+              <ul class="mt-2 space-y-1.5 text-sm text-slate-700">
+                <li v-for="(idea, index) in selectedProduct.usageIdeas" :key="`usage-idea-${index}`" class="flex items-start gap-2">
+                  <span class="mt-1 h-1.5 w-1.5 shrink-0 rounded-full bg-emerald-600"></span>
+                  <span>{{ idea }}</span>
+                </li>
+              </ul>
+            </div>
+          </div>
+
+          <div v-if="detailProductImages.length > 0" class="rounded-2xl border border-slate-200 bg-white/95 p-4 shadow-sm ring-1 ring-slate-100 md:p-6">
+            <h3 class="text-xl font-semibold text-ink">Product Gallery</h3>
+            <div class="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+              <button
+                v-for="(image, index) in detailProductImages"
+                :key="`gallery-${index}`"
+                type="button"
+                class="group relative overflow-hidden rounded-lg border border-slate-200 transition hover:border-brand"
+                @click="openImageZoom(index)"
+              >
+                <img :src="image" :alt="`Product image ${index + 1}`" class="h-32 w-full object-cover transition group-hover:scale-105" loading="lazy" />
+                <div class="absolute inset-0 flex items-center justify-center bg-black/0 transition group-hover:bg-black/40">
+                  <svg class="h-6 w-6 text-white opacity-0 transition group-hover:opacity-100" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                    <circle cx="11" cy="11" r="8" />
+                    <path d="m21 21-4.35-4.35" />
+                    <path d="M11 8v6" />
+                    <path d="M8 11h6" />
+                  </svg>
+                </div>
+              </button>
+            </div>
+          </div>
+
+          <div class="rounded-2xl border border-slate-200 bg-white/95 p-4 shadow-sm ring-1 ring-slate-100 md:p-6">
+            <div class="mb-3 flex items-center justify-between gap-2">
+              <h3 class="text-xl font-semibold text-ink">Customer Reviews</h3>
+              <p class="text-sm text-slate-500">{{ selectedProductReviews.length }} reviews</p>
+            </div>
+            <div class="grid gap-3 md:grid-cols-3">
+              <article v-for="review in selectedProductReviews" :key="review.id" class="rounded-xl border border-slate-200 bg-white p-4">
+                <div class="flex items-center justify-between gap-2">
+                  <p class="text-sm font-semibold text-ink">{{ review.name }}</p>
+                  <p class="text-xs text-slate-500">{{ review.date }}</p>
+                </div>
+                <p class="mt-1 text-sm text-amber-500">{{ '★'.repeat(review.rating) }}{{ '☆'.repeat(5 - review.rating) }}</p>
+                <p class="mt-2 text-sm leading-6 text-slate-600">{{ review.comment }}</p>
+              </article>
+            </div>
+          </div>
         </div>
-      </section>
+
+        <!-- Right: Sticky Sidebar -->
+        <aside class="hidden lg:block">
+          <div class="sticky top-4 h-[calc(100vh-100px)] flex flex-col rounded-lg border border-slate-200 bg-gradient-to-br from-emerald-50 to-white p-4 shadow-md">
+            <h4 class="text-sm font-semibold text-ink">Related Products</h4>
+            <div class="mt-3 flex-1 space-y-2 overflow-y-auto pr-1">
+              <button
+                v-for="product in relatedProductPool.slice(0, 15)"
+                :key="product.name"
+                type="button"
+                class="group flex w-full gap-2.5 overflow-hidden rounded-lg border border-slate-200 bg-white p-2.5 transition hover:border-brand hover:bg-emerald-50"
+                @click="openProductDetail(product)"
+              >
+                <div class="relative h-16 w-16 flex-shrink-0 overflow-hidden rounded-md">
+                  <img :src="product.image" :alt="product.name" class="h-full w-full object-cover transition group-hover:scale-105" loading="lazy" />
+                  <div v-if="product.badge" class="absolute inset-0 flex items-end justify-end">
+                    <span class="bg-rose-500 px-1 py-0.5 text-[9px] font-bold text-white">{{ product.badge }}</span>
+                  </div>
+                </div>
+                <div class="flex-1 min-w-0">
+                  <p class="line-clamp-2 text-xs font-semibold text-slate-900">{{ product.name }}</p>
+                  <p v-if="product.category" class="mt-0.5 text-[10px] text-slate-500">{{ product.category }}</p>
+                  <p class="mt-1 text-xs font-bold text-brand">{{ product.price }}</p>
+                  <p v-if="product.oldPrice" class="text-[9px] text-slate-400 line-through">{{ product.oldPrice }}</p>
+                </div>
+              </button>
+            </div>
+          </div>
+        </aside>
+      </div>
+
+      <RelatedProductsCarousel
+        v-if="selectedProduct"
+        :products="relatedProductPool"
+        :current-product-name="selectedProduct.name"
+        :current-category="selectedProduct.category"
+        @open-product="openProductDetail"
+      />
 
       <transition name="zoom-fade">
         <div
