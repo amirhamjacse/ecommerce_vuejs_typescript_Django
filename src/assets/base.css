@@ -1,0 +1,67 @@
+@import url('https://fonts.googleapis.com/css2?family=Hind+Siliguri:wght@400;500;600;700&family=Sora:wght@500;600;700&display=swap');
+@import 'tailwindcss';
+
+@theme {
+  --font-sans: 'Hind Siliguri', 'Noto Sans Bengali', 'Segoe UI', sans-serif;
+  --font-display: 'Sora', 'Hind Siliguri', 'Segoe UI', sans-serif;
+  --color-brand: #1a8f5f;
+  --color-brand-dark: #0d6b44;
+  --color-brand-soft: #e8f8f1;
+  --color-accent: #ff8f1f;
+  --color-ink: #123445;
+  --color-mist: #f5f8fb;
+}
+
+@layer base {
+  body {
+    @apply text-ink antialiased;
+  }
+
+  h1,
+  h2,
+  h3,
+  h4 {
+    @apply font-display;
+  }
+}
+
+@layer utilities {
+  .surface-card {
+    @apply rounded-2xl border border-slate-200 bg-white shadow-sm;
+  }
+
+  .mesh-hero {
+    background-image:
+      radial-gradient(circle at 14% 20%, #fff6dc 0%, transparent 28%),
+      radial-gradient(circle at 86% 22%, #cff2e3 0%, transparent 34%),
+      linear-gradient(135deg, #ffffff 0%, #eef7ff 55%, #f7fffc 100%);
+  }
+
+  .deal-glow {
+    background-image: linear-gradient(150deg, #064c31 0%, #13865a 48%, #15a36a 100%);
+  }
+
+  .rise-in {
+    animation: riseIn 0.6s ease-out both;
+  }
+
+  .rise-in-delay-1 {
+    animation-delay: 0.1s;
+  }
+
+  .rise-in-delay-2 {
+    animation-delay: 0.2s;
+  }
+}
+
+@keyframes riseIn {
+  from {
+    opacity: 0;
+    transform: translateY(14px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
