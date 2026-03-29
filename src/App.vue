@@ -1,5 +1,6 @@
 <script setup lang="ts">
-import { computed, onMounted, onUnmounted, ref } from 'vue'
+import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
+import { useRoute, useRouter } from 'vue-router'
 
 type Product = {
   name: string
@@ -8,6 +9,10 @@ type Product = {
   oldPrice: string
   image: string
   badge?: string
+  images?: string[]
+  description?: string
+  keyFeatures?: string[]
+  usageIdeas?: string[]
 }
 
 type CartProduct = {
@@ -29,6 +34,43 @@ type WishlistItem = {
   name: string
   price: string
   image: string
+}
+
+type ProductPreview = {
+  name: string
+  price: string
+  image: string
+  images?: string[]
+  oldPrice?: string
+  category?: string
+  badge?: string
+  tag?: string
+  save?: string
+  description?: string
+  keyFeatures?: string[]
+  usageIdeas?: string[]
+}
+
+type ProductReview = {
+  id: string
+  name: string
+  rating: number
+  comment: string
+  date: string
+}
+
+const route = useRoute()
+const router = useRouter()
+
+const slugifyProductName = (name: string): string => {
+  return name
+    .toLowerCase()
+    .replace(/\s+/g, '-')
+    .replace(/[^\w-]/g, '')
+}
+
+const unslugifyProductName = (slug: string): string => {
+  return slug.replace(/-/g, ' ')
 }
 
 const carouselPosters = [
@@ -367,6 +409,27 @@ const popularItems: Product[] = [
     price: 'BDT 590',
     oldPrice: 'BDT 650',
     image: 'https://picsum.photos/seed/pro-dates/360/300',
+    images: [
+      'https://picsum.photos/seed/pro-dates/360/300',
+      'https://picsum.photos/seed/pro-dates-2/360/300',
+      'https://picsum.photos/seed/pro-dates-3/360/300',
+      'https://picsum.photos/seed/pro-dates-4/360/300',
+    ],
+    description:
+      'Grown in the fertile lands of the Middle East, Ghorer Bazar Medjool Dates are premium-quality, naturally sweet, and delightfully soft. Known as the "King of Dates," Medjool dates are rich in fiber, potassium, and essential nutrients—making them a healthy alternative to refined sugar and an ideal natural energy booster.',
+    keyFeatures: [
+      'Large, plump, and juicy Medjool dates',
+      'Naturally sweet with a rich caramel-like flavor',
+      'Excellent source of dietary fiber, potassium, magnesium & antioxidants',
+      '100% natural, with no preservatives or added sugar',
+      'Perfect for snacking, baking, or adding to smoothies & desserts',
+    ],
+    usageIdeas: [
+      'Enjoy as a wholesome snack anytime',
+      'Stuff with nuts or cheese for a gourmet delight',
+      'Blend into smoothies, shakes, or energy bars',
+      'Use as a natural sweetener in baking and cooking',
+    ],
   },
   {
     name: 'Green Chili 250g',
@@ -416,6 +479,7 @@ const buildCartId = (name: string): string => {
 
 const isCartOpen = ref(false)
 const isWishlistOpen = ref(false)
+const isProductDetailOpen = ref(false)
 const cartItems = ref<CartItem[]>([])
 const cartToastMessage = ref('')
 const showCartToast = ref(false)
@@ -424,6 +488,35 @@ const toastTone = ref<ToastTone>('success')
 const cartShake = ref(false)
 const wishlistLimit = 50
 const wishlistItems = ref<WishlistItem[]>([])
+const selectedProduct = ref<ProductPreview | null>(null)
+const detailQty = ref(1)
+const activeDetailImage = ref(0)
+const isImageZoomed = ref(false)
+const zoomedImageIndex = ref(0)
+
+const defaultProductReviews: ProductReview[] = [
+  {
+    id: 'review-1',
+    name: 'Rahim Ahmed',
+    rating: 5,
+    comment: 'Product quality is excellent and the packaging was very secure. Will order again.',
+    date: '2 days ago',
+  },
+  {
+    id: 'review-2',
+    name: 'Nusrat Jahan',
+    rating: 4,
+    comment: 'Fresh and exactly as shown. Delivery was on time. Price could be slightly lower.',
+    date: '1 week ago',
+  },
+  {
+    id: 'review-3',
+    name: 'Imran Hossain',
+    rating: 5,
+    comment: 'Great value for money and customer support was very responsive.',
+    date: '2 weeks ago',
+  },
+]
 
 const cartCount = computed(() => {
   return cartItems.value.reduce((total, item) => total + item.qty, 0)
@@ -447,6 +540,53 @@ const toastClass = computed(() => {
   return 'border-emerald-300 bg-emerald-600 text-white ring-emerald-300/40'
 })
 
+const allProducts = computed(() => {
+  return [...flashSaleItems, ...topSellingProducts, ...popularItems]
+})
+
+const isDetailPageShown = computed(() => {
+  return route.name === 'product-detail'
+})
+
+const routeProductName = computed(() => {
+  const param = route.params.productName
+  return typeof param === 'string' ? unslugifyProductName(param) : null
+})
+
+const currentProductFromRoute = computed(() => {
+  if (!routeProductName.value) return null
+  const routeName = routeProductName.value
+  const product = allProducts.value.find((p) => p.name.toLowerCase() === routeName.toLowerCase())
+  if (!product) return null
+  return {
+    name: product.name,
+    price: product.price,
+    image: product.image,
+    oldPrice: product.oldPrice,
+    category: 'category' in product ? product.category : 'Products',
+    badge: 'badge' in product ? product.badge : undefined,
+    images: 'images' in product ? product.images : undefined,
+    description: 'description' in product ? product.description : undefined,
+    keyFeatures: 'keyFeatures' in product ? product.keyFeatures : undefined,
+    usageIdeas: 'usageIdeas' in product ? product.usageIdeas : undefined,
+  } as ProductPreview
+})
+
+watch(
+  () => route.name,
+  (newRouteName) => {
+    if (newRouteName === 'product-detail') {
+      selectedProduct.value = currentProductFromRoute.value
+      isProductDetailOpen.value = true
+      window.scrollTo({ top: 0, behavior: 'smooth' })
+    } else {
+      selectedProduct.value = null
+      isProductDetailOpen.value = false
+    }
+  },
+  { immediate: true }
+)
+
 const openCart = () => {
   isWishlistOpen.value = false
   isCartOpen.value = true
@@ -463,6 +603,105 @@ const openWishlist = () => {
 
 const closeWishlist = () => {
   isWishlistOpen.value = false
+}
+
+const openProductDetail = (item: ProductPreview) => {
+  isCartOpen.value = false
+  isWishlistOpen.value = false
+  detailQty.value = 1
+  isImageZoomed.value = false
+  const productSlug = slugifyProductName(item.name)
+  router.push({ name: 'product-detail', params: { productName: productSlug } })
+}
+
+const closeProductDetail = () => {
+  detailQty.value = 1
+  activeDetailImage.value = 0
+  if (isImageZoomed.value) {
+    closeImageZoom()
+  }
+  router.push({ name: 'home' })
+}
+
+const selectedProductReviews = computed(() => {
+  const activeProduct = selectedProduct.value
+  if (!activeProduct) return defaultProductReviews
+  return defaultProductReviews.map((review, index) => ({
+    ...review,
+    id: `${buildCartId(activeProduct.name)}-${index + 1}`,
+  }))
+})
+
+const detailProductImages = computed(() => {
+  if (!selectedProduct.value) return []
+  const images = selectedProduct.value.images
+  if (images && images.length > 0) return images
+  return [selectedProduct.value.image]
+})
+
+const currentDetailImage = computed(() => {
+  const images = detailProductImages.value
+  return images[activeDetailImage.value] || images[0] || ''
+})
+
+const nextDetailImage = () => {
+  const max = detailProductImages.value.length - 1
+  activeDetailImage.value = activeDetailImage.value >= max ? 0 : activeDetailImage.value + 1
+}
+
+const prevDetailImage = () => {
+  const max = detailProductImages.value.length - 1
+  activeDetailImage.value = activeDetailImage.value <= 0 ? max : activeDetailImage.value - 1
+}
+
+const handleZoomKeydown = (event: KeyboardEvent) => {
+  if (!isImageZoomed.value) return
+  if (event.key === 'Escape') {
+    closeImageZoom()
+    event.preventDefault()
+  } else if (event.key === 'ArrowLeft') {
+    prevZoomedImage()
+    event.preventDefault()
+  } else if (event.key === 'ArrowRight') {
+    nextZoomedImage()
+    event.preventDefault()
+  }
+}
+
+const openImageZoom = (index: number) => {
+  zoomedImageIndex.value = index
+  isImageZoomed.value = true
+  document.addEventListener('keydown', handleZoomKeydown)
+  document.body.style.overflow = 'hidden'
+}
+
+const closeImageZoom = () => {
+  isImageZoomed.value = false
+  document.removeEventListener('keydown', handleZoomKeydown)
+  document.body.style.overflow = 'auto'
+}
+
+const nextZoomedImage = () => {
+  const max = detailProductImages.value.length - 1
+  zoomedImageIndex.value = zoomedImageIndex.value >= max ? 0 : zoomedImageIndex.value + 1
+}
+
+const prevZoomedImage = () => {
+  const max = detailProductImages.value.length - 1
+  zoomedImageIndex.value = zoomedImageIndex.value <= 0 ? max : zoomedImageIndex.value - 1
+}
+
+const addDetailProductToCart = () => {
+  if (!selectedProduct.value) return
+  for (let count = 0; count < detailQty.value; count += 1) {
+    addToCart(selectedProduct.value)
+  }
+}
+
+const buyDetailProduct = () => {
+  addDetailProductToCart()
+  closeProductDetail()
+  openCart()
 }
 
 const triggerToast = (message: string, tone: ToastTone = 'success') => {
@@ -1022,8 +1261,318 @@ const topSellingThumb = 'h-52 w-full object-cover transition duration-300 group-
       </div>
     </aside>
 
-    <main class="mt-6 space-y-6 md:space-y-7">
-      <section class="rise-in grid grid-cols-1 gap-3 md:gap-5 lg:grid-cols-[70%_30%]">
+    <main v-if="isProductDetailOpen && selectedProduct" class="mt-6 space-y-6 md:space-y-7">
+      <section class="surface-card p-4 md:p-6">
+        <button
+          type="button"
+          class="inline-flex items-center gap-2 rounded-lg border border-slate-200 px-3 py-2 text-sm font-semibold text-slate-700 transition hover:border-brand hover:text-brand"
+          @click="closeProductDetail"
+        >
+          <svg class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <path d="m15 18-6-6 6-6" />
+          </svg>
+          Back to products
+        </button>
+
+        <div class="mt-4 grid gap-5 md:grid-cols-[45%_55%]">
+          <div>
+            <div class="relative overflow-hidden rounded-2xl border border-slate-200 bg-slate-50">
+              <img :src="currentDetailImage" :alt="selectedProduct.name" class="h-[300px] w-full object-cover md:h-[460px]" loading="lazy" />
+              <div v-if="detailProductImages.length > 1" class="absolute inset-x-0 bottom-4 flex items-center justify-between px-3">
+                <button
+                  type="button"
+                  class="h-7 w-7 rounded-full border border-white/30 bg-black/40 text-white backdrop-blur transition hover:bg-black/60"
+                  aria-label="Previous image"
+                  @click="prevDetailImage"
+                >
+                  ‹
+                </button>
+                <span class="text-xs font-medium text-white/70">{{ activeDetailImage + 1 }} / {{ detailProductImages.length }}</span>
+                <button
+                  type="button"
+                  class="h-7 w-7 rounded-full border border-white/30 bg-black/40 text-white backdrop-blur transition hover:bg-black/60"
+                  aria-label="Next image"
+                  @click="nextDetailImage"
+                >
+                  ›
+                </button>
+              </div>
+              <button
+                v-if="detailProductImages.length > 0"
+                type="button"
+                class="absolute right-3 top-3 inline-flex h-9 w-9 items-center justify-center rounded-lg border border-white/30 bg-black/40 text-white backdrop-blur transition hover:bg-black/60"
+                aria-label="Zoom image"
+                @click.stop="openImageZoom(activeDetailImage)"
+              >
+                <svg class="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                  <circle cx="11" cy="11" r="8" />
+                  <path d="m21 21-4.35-4.35" />
+                  <path d="M11 8v6" />
+                  <path d="M8 11h6" />
+                </svg>
+              </button>
+            </div>
+
+            <div v-if="detailProductImages.length > 1" class="mt-3 flex gap-2 overflow-x-auto pb-1">
+              <button
+                v-for="(image, index) in detailProductImages"
+                :key="`thumb-${index}`"
+                type="button"
+                class="h-16 w-16 shrink-0 overflow-hidden rounded-lg border-2 transition"
+                :class="activeDetailImage === index ? 'border-brand shadow-md' : 'border-slate-200 hover:border-slate-300'"
+                @click="activeDetailImage = index"
+              >
+                <img :src="image" :alt="`Product image ${index + 1}`" class="h-full w-full object-cover" loading="lazy" />
+              </button>
+            </div>
+          </div>
+
+          <div>
+            <p class="text-xs font-semibold uppercase tracking-wide text-brand">Product Details</p>
+            <h2 class="mt-2 text-2xl font-semibold text-ink md:text-3xl">{{ selectedProduct.name }}</h2>
+            <p class="mt-1 text-sm text-slate-600">Category: {{ selectedProduct.category ?? 'Grocery Essentials' }}</p>
+
+            <div class="mt-3 flex flex-wrap items-center gap-3">
+              <span class="text-2xl font-bold text-brand">{{ selectedProduct.price }}</span>
+              <span v-if="selectedProduct.oldPrice" class="text-base text-slate-400 line-through">{{ selectedProduct.oldPrice }}</span>
+              <span v-if="selectedProduct.badge" class="rounded-full bg-rose-100 px-2.5 py-1 text-xs font-semibold text-rose-700">{{ selectedProduct.badge }}</span>
+            </div>
+
+            <p v-if="selectedProduct.description" class="mt-4 text-sm leading-6 text-slate-600">
+              {{ selectedProduct.description }}
+            </p>
+            <p v-else class="mt-4 text-sm leading-6 text-slate-600">
+              Carefully selected quality product for daily use. Fresh stock, hygienic handling, and reliable delivery support across your city.
+            </p>
+
+            <ul v-if="selectedProduct.keyFeatures && selectedProduct.keyFeatures.length > 0" class="mt-4 space-y-1.5 text-sm text-slate-700">
+              <li v-for="(feature, index) in selectedProduct.keyFeatures" :key="`feature-${index}`">{{ feature }}</li>
+            </ul>
+            <ul v-else class="mt-4 space-y-1.5 text-sm text-slate-700">
+              <li>Fresh stock with quality check before dispatch</li>
+              <li>Secure packaging to keep items safe in transit</li>
+              <li>Fast delivery with quick support on issues</li>
+            </ul>
+
+            <div v-if="selectedProduct.usageIdeas && selectedProduct.usageIdeas.length > 0" class="mt-4">
+              <p class="text-xs font-semibold uppercase tracking-wide text-slate-500">Usage Ideas:</p>
+              <ul class="mt-2 space-y-1 text-sm text-slate-600">
+                <li v-for="(idea, index) in selectedProduct.usageIdeas" :key="`idea-${index}`">• {{ idea }}</li>
+              </ul>
+            </div>
+
+            <div class="mt-5 flex flex-wrap items-center gap-3">
+              <div class="inline-flex items-center overflow-hidden rounded-lg border border-slate-200">
+                <button
+                  type="button"
+                  class="h-10 w-10 text-lg font-semibold text-slate-700 hover:bg-slate-100"
+                  @click="detailQty = Math.max(1, detailQty - 1)"
+                >
+                  -
+                </button>
+                <span class="inline-flex h-10 min-w-10 items-center justify-center border-x border-slate-200 text-sm font-semibold text-slate-700">{{ detailQty }}</span>
+                <button
+                  type="button"
+                  class="h-10 w-10 text-lg font-semibold text-slate-700 hover:bg-slate-100"
+                  @click="detailQty += 1"
+                >
+                  +
+                </button>
+              </div>
+
+              <button
+                type="button"
+                class="inline-flex items-center gap-2 rounded-xl border border-slate-200 px-4 py-2.5 text-sm font-semibold text-slate-700 hover:border-brand hover:text-brand"
+                @click="toggleWishlist(selectedProduct)"
+              >
+                <svg class="h-4 w-4" viewBox="0 0 24 24" :class="isWishlisted(selectedProduct.name) ? 'fill-rose-500 text-rose-500' : 'fill-transparent text-slate-500'" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                  <path d="M20.8 4.6a5.5 5.5 0 0 0-7.8 0L12 5.6l-1-1a5.5 5.5 0 0 0-7.8 7.8l1 1L12 21l7.8-7.6 1-1a5.5 5.5 0 0 0 0-7.8z" />
+                </svg>
+                Wishlist
+              </button>
+            </div>
+
+            <div class="mt-5 grid grid-cols-2 gap-2">
+              <button
+                type="button"
+                class="inline-flex items-center justify-center gap-2 rounded-xl border border-emerald-200 px-4 py-3 text-sm font-semibold text-emerald-700 hover:border-emerald-400"
+                @click="addDetailProductToCart"
+              >
+                <svg class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                  <circle cx="9" cy="20" r="1" />
+                  <circle cx="17" cy="20" r="1" />
+                  <path d="M5 5h2l2 10h9l2-7H8" />
+                </svg>
+                Add to cart
+              </button>
+              <button
+                type="button"
+                class="rounded-xl bg-brand px-4 py-3 text-sm font-semibold text-white hover:bg-brand-dark"
+                @click="buyDetailProduct"
+              >
+                Buy now
+              </button>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section class="space-y-4 md:space-y-6">
+        <div class="surface-card p-4 md:p-6">
+          <h3 class="text-2xl font-semibold text-ink">Product Description & Images</h3>
+          <p v-if="selectedProduct.description" class="mt-3 text-base leading-7 text-slate-700">{{ selectedProduct.description }}</p>
+          <p v-else class="mt-3 text-base leading-7 text-slate-700">Carefully selected quality product for daily use. Fresh stock, hygienic handling, and reliable delivery support across your city.</p>
+
+          <div v-if="selectedProduct.keyFeatures && selectedProduct.keyFeatures.length > 0" class="mt-5">
+            <h4 class="font-semibold text-ink">Key Features:</h4>
+            <ul class="mt-2 space-y-1.5 text-sm text-slate-700">
+              <li v-for="(feature, index) in selectedProduct.keyFeatures" :key="`key-feature-${index}`" class="flex items-start gap-2">
+                <span class="mt-1 h-1.5 w-1.5 shrink-0 rounded-full bg-brand"></span>
+                <span>{{ feature }}</span>
+              </li>
+            </ul>
+          </div>
+
+          <div v-if="selectedProduct.usageIdeas && selectedProduct.usageIdeas.length > 0" class="mt-5">
+            <h4 class="font-semibold text-ink">Usage Ideas:</h4>
+            <ul class="mt-2 space-y-1.5 text-sm text-slate-700">
+              <li v-for="(idea, index) in selectedProduct.usageIdeas" :key="`usage-idea-${index}`" class="flex items-start gap-2">
+                <span class="mt-1 h-1.5 w-1.5 shrink-0 rounded-full bg-emerald-600"></span>
+                <span>{{ idea }}</span>
+              </li>
+            </ul>
+          </div>
+        </div>
+
+        <div v-if="detailProductImages.length > 0" class="surface-card p-4 md:p-6">
+          <h3 class="text-xl font-semibold text-ink">Product Gallery</h3>
+          <div class="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+            <button
+              v-for="(image, index) in detailProductImages"
+              :key="`gallery-${index}`"
+              type="button"
+              class="group relative overflow-hidden rounded-lg border border-slate-200 transition hover:border-brand"
+              @click="openImageZoom(index)"
+            >
+              <img :src="image" :alt="`Product image ${index + 1}`" class="h-32 w-full object-cover transition group-hover:scale-105" loading="lazy" />
+              <div class="absolute inset-0 flex items-center justify-center bg-black/0 transition group-hover:bg-black/40">
+                <svg class="h-6 w-6 text-white opacity-0 transition group-hover:opacity-100" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                  <circle cx="11" cy="11" r="8" />
+                  <path d="m21 21-4.35-4.35" />
+                  <path d="M11 8v6" />
+                  <path d="M8 11h6" />
+                </svg>
+              </div>
+            </button>
+          </div>
+        </div>
+      </section>
+
+      <section class="surface-card p-4 md:p-6">
+        <div class="mb-3 flex items-center justify-between gap-2">
+          <h3 class="text-xl font-semibold text-ink">Customer Reviews</h3>
+          <p class="text-sm text-slate-500">{{ selectedProductReviews.length }} reviews</p>
+        </div>
+        <div class="grid gap-3 md:grid-cols-3">
+          <article v-for="review in selectedProductReviews" :key="review.id" class="rounded-xl border border-slate-200 bg-white p-4">
+            <div class="flex items-center justify-between gap-2">
+              <p class="text-sm font-semibold text-ink">{{ review.name }}</p>
+              <p class="text-xs text-slate-500">{{ review.date }}</p>
+            </div>
+            <p class="mt-1 text-sm text-amber-500">{{ '★'.repeat(review.rating) }}{{ '☆'.repeat(5 - review.rating) }}</p>
+            <p class="mt-2 text-sm leading-6 text-slate-600">{{ review.comment }}</p>
+          </article>
+        </div>
+      </section>
+
+      <transition name="zoom-fade">
+        <div
+          v-if="isImageZoomed && selectedProduct && detailProductImages.length > 0"
+          class="fixed inset-0 z-[9999] flex flex-col items-center justify-center bg-black/95 backdrop-blur-sm"
+          @click="closeImageZoom"
+        >
+          <!-- Close Button -->
+          <button
+            type="button"
+            class="absolute right-6 top-6 z-[10001] inline-flex h-12 w-12 items-center justify-center rounded-full border border-white/20 bg-white/10 text-white backdrop-blur transition duration-200 hover:bg-white/20 hover:border-white/40"
+            aria-label="Close (ESC)"
+            @click.stop="closeImageZoom"
+          >
+            <svg class="h-6 w-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <path d="M18 6 6 18" />
+              <path d="m6 6 12 12" />
+            </svg>
+          </button>
+
+          <!-- Image Counter & Product Title -->
+          <div class="absolute top-6 left-6 z-[10001]">
+            <p class="text-sm font-medium text-white/70">{{ selectedProduct.name }}</p>
+            <p class="mt-1 text-xs font-medium text-white/50">{{ zoomedImageIndex + 1 }} / {{ detailProductImages.length }}</p>
+          </div>
+
+          <!-- Main Image Container -->
+          <div class="relative flex h-full w-full max-w-6xl items-center justify-center px-20 py-16" @click.stop>
+            <img
+              :src="detailProductImages[zoomedImageIndex]"
+              :alt="`${selectedProduct.name} - Image ${zoomedImageIndex + 1}`"
+              class="h-auto max-h-[75vh] w-auto max-w-full object-contain transition-opacity duration-300"
+              loading="lazy"
+            />
+
+            <!-- Previous Button -->
+            <button
+              v-if="detailProductImages.length > 1"
+              type="button"
+              class="absolute left-6 top-1/2 z-[10001] inline-flex h-14 w-14 -translate-y-1/2 items-center justify-center rounded-full border border-white/20 bg-white/10 text-white backdrop-blur transition duration-200 hover:bg-white/20 hover:border-white/40 group"
+              aria-label="Previous (←)"
+              @click.stop="prevZoomedImage"
+            >
+              <svg class="h-6 w-6 transition group-hover:-translate-x-0.5" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+                <path d="M15.41 7.41L14 6l-6 6 6 6 1.41-1.41L10.83 12z" />
+              </svg>
+            </button>
+
+            <!-- Next Button -->
+            <button
+              v-if="detailProductImages.length > 1"
+              type="button"
+              class="absolute right-6 top-1/2 z-[10001] inline-flex h-14 w-14 -translate-y-1/2 items-center justify-center rounded-full border border-white/20 bg-white/10 text-white backdrop-blur transition duration-200 hover:bg-white/20 hover:border-white/40 group"
+              aria-label="Next (→)"
+              @click.stop="nextZoomedImage"
+            >
+              <svg class="h-6 w-6 transition group-hover:translate-x-0.5" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+                <path d="M8.59 16.59L10 18l6-6-6-6-1.41 1.41L13.17 12z" />
+              </svg>
+            </button>
+          </div>
+
+          <!-- Thumbnail Strip -->
+          <div v-if="detailProductImages.length > 1" class="absolute bottom-6 left-1/2 z-[10001] -translate-x-1/2 flex items-center justify-center gap-2 rounded-full bg-black/40 backdrop-blur px-4 py-3">
+            <div class="flex gap-2 overflow-x-auto max-w-[80vw]">
+              <button
+                v-for="(_, index) in detailProductImages"
+                :key="`zoom-thumb-${index}`"
+                type="button"
+                class="h-12 w-12 shrink-0 overflow-hidden rounded-lg border-2 transition-all duration-200"
+                :class="zoomedImageIndex === index ? 'border-white shadow-lg shadow-white/40' : 'border-white/20 hover:border-white/40 opacity-60 hover:opacity-100'"
+                @click.stop="zoomedImageIndex = index"
+              >
+                <img :src="detailProductImages[index]" :alt="`Thumbnail ${index + 1}`" class="h-full w-full object-cover" loading="lazy" />
+              </button>
+            </div>
+          </div>
+
+          <!-- Keyboard Hints -->
+          <div class="absolute bottom-6 right-6 z-[10001] text-center text-xs text-white/50 font-medium">
+            <p>← → or Arrow Keys to navigate</p>
+            <p>ESC to close</p>
+          </div>
+        </div>
+      </transition>
+    </main>
+
+    <main v-else class="mt-6 space-y-6 md:space-y-7">
+      <section class="rise-in grid grid-cols-1 gap-3 md:gap-5 md:grid-cols-[70%_30%]">
         <article
           class="relative overflow-hidden rounded-3xl border border-slate-100 shadow-xl ring-1 ring-black/5"
           @mouseenter="stopAutoPoster"
@@ -1156,7 +1705,7 @@ const topSellingThumb = 'h-52 w-full object-cover transition duration-300 group-
           <div class="flex transition-transform duration-500 ease-out" :style="{ transform: `translateX(-${activeFlashSaleSlide * 100}%)` }">
             <div v-for="(slide, slideIndex) in flashSaleSlides" :key="`flash-sale-slide-${slideIndex}`" class="w-full shrink-0">
               <div class="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-                <article v-for="item in slide" :key="item.name" :class="limitedOfferCard">
+                <article v-for="item in slide" :key="item.name" :class="`${limitedOfferCard} cursor-pointer`" @click="openProductDetail(item)">
                   <div class="relative overflow-hidden">
                     <img :src="item.image" :alt="item.name" :class="limitedOfferThumb" loading="lazy" />
                     <span
@@ -1174,7 +1723,7 @@ const topSellingThumb = 'h-52 w-full object-cover transition duration-300 group-
                         type="button"
                         class="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-full border border-slate-200 transition hover:border-rose-300 hover:bg-rose-50"
                         :aria-label="isWishlisted(item.name) ? 'Remove from wishlist' : 'Add to wishlist'"
-                        @click="toggleWishlist(item)"
+                        @click.stop="toggleWishlist(item)"
                       >
                         <svg
                           class="h-4 w-4"
@@ -1194,7 +1743,7 @@ const topSellingThumb = 'h-52 w-full object-cover transition duration-300 group-
                       <span class="text-lg font-bold text-amber-700">{{ item.price }}</span>
                       <span class="text-sm text-slate-400 line-through">{{ item.oldPrice }}</span>
                     </div>
-                    <button class="mt-4 inline-flex w-full items-center justify-center gap-1.5 rounded-xl bg-amber-600 px-3 py-2.5 text-sm font-semibold text-white hover:bg-amber-700" type="button" @click="addToCart(item)">
+                    <button class="mt-4 inline-flex w-full items-center justify-center gap-1.5 rounded-xl bg-amber-600 px-3 py-2.5 text-sm font-semibold text-white hover:bg-amber-700" type="button" @click.stop="addToCart(item)">
                       <svg class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
                         <circle cx="9" cy="20" r="1" />
                         <circle cx="17" cy="20" r="1" />
@@ -1262,7 +1811,8 @@ const topSellingThumb = 'h-52 w-full object-cover transition duration-300 group-
                 <article
                   v-for="item in slide"
                   :key="item.name"
-                  :class="topSellingCard"
+                  :class="`${topSellingCard} cursor-pointer`"
+                  @click="openProductDetail(item)"
                 >
                   <div class="overflow-hidden">
                     <img
@@ -1280,7 +1830,7 @@ const topSellingThumb = 'h-52 w-full object-cover transition duration-300 group-
                         type="button"
                         class="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-full border border-slate-200 transition hover:border-rose-300 hover:bg-rose-50"
                         :aria-label="isWishlisted(item.name) ? 'Remove from wishlist' : 'Add to wishlist'"
-                        @click="toggleWishlist(item)"
+                        @click.stop="toggleWishlist(item)"
                       >
                         <svg
                           class="h-4 w-4"
@@ -1305,7 +1855,7 @@ const topSellingThumb = 'h-52 w-full object-cover transition duration-300 group-
                       <button
                         class="inline-flex items-center justify-center gap-1.5 rounded-xl border border-emerald-200 px-3 py-2.5 text-sm font-semibold text-emerald-700 transition hover:border-emerald-500"
                         type="button"
-                        @click="addToCart(item)"
+                        @click.stop="addToCart(item)"
                       >
                         <svg class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
                           <circle cx="9" cy="20" r="1" />
@@ -1314,7 +1864,7 @@ const topSellingThumb = 'h-52 w-full object-cover transition duration-300 group-
                         </svg>
                         <span>Add To Cart</span>
                       </button>
-                      <button class="rounded-xl bg-emerald-600 px-3 py-2.5 text-sm font-semibold text-white hover:bg-emerald-700" type="button" @click="buyNow(item)">
+                      <button class="rounded-xl bg-emerald-600 px-3 py-2.5 text-sm font-semibold text-white hover:bg-emerald-700" type="button" @click.stop="buyNow(item)">
                         Buy now
                       </button>
                     </div>
@@ -1380,7 +1930,7 @@ const topSellingThumb = 'h-52 w-full object-cover transition duration-300 group-
         </div>
 
         <div class="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-          <article v-for="item in filteredPopularItems" :key="item.name" :class="productCard">
+          <article v-for="item in filteredPopularItems" :key="item.name" :class="`${productCard} cursor-pointer`" @click="openProductDetail(item)">
             <div class="overflow-hidden">
               <img :src="item.image" :alt="item.name" :class="productThumb" loading="lazy" />
             </div>
@@ -1392,7 +1942,7 @@ const topSellingThumb = 'h-52 w-full object-cover transition duration-300 group-
                   type="button"
                   class="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-full border border-slate-200 transition hover:border-rose-300 hover:bg-rose-50"
                   :aria-label="isWishlisted(item.name) ? 'Remove from wishlist' : 'Add to wishlist'"
-                  @click="toggleWishlist(item)"
+                  @click.stop="toggleWishlist(item)"
                 >
                   <svg
                     class="h-4 w-4"
@@ -1412,7 +1962,7 @@ const topSellingThumb = 'h-52 w-full object-cover transition duration-300 group-
                 <span class="text-base font-bold text-brand">{{ item.price }}</span>
                 <span class="text-xs text-slate-400 line-through">{{ item.oldPrice }}</span>
               </div>
-              <button :class="`${productBtn} inline-flex items-center justify-center gap-1.5`" type="button" @click="addToCart(item)">
+              <button :class="`${productBtn} inline-flex items-center justify-center gap-1.5`" type="button" @click.stop="addToCart(item)">
                 <svg class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
                   <circle cx="9" cy="20" r="1" />
                   <circle cx="17" cy="20" r="1" />
@@ -1620,6 +2170,42 @@ const topSellingThumb = 'h-52 w-full object-cover transition duration-300 group-
 
 .toast-pop {
   animation: toastPop 0.26s ease;
+}
+
+.fade-enter-active,
+.fade-leave-active {
+  transition: opacity 0.3s ease;
+}
+
+.fade-enter-from,
+.fade-leave-to {
+  opacity: 0;
+}
+
+.zoom-fade-enter-active {
+  animation: zoomFadeIn 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.zoom-fade-leave-active {
+  animation: zoomFadeOut 0.25s cubic-bezier(0.7, 0, 0.84, 0);
+}
+
+@keyframes zoomFadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes zoomFadeOut {
+  from {
+    opacity: 1;
+  }
+  to {
+    opacity: 0;
+  }
 }
 
 @keyframes cartTabShake {
