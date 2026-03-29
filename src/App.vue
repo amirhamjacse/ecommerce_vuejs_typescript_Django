@@ -49,6 +49,8 @@ const prevPoster = () => {
 }
 
 let posterTimer: ReturnType<typeof setInterval> | undefined
+let flashSaleTimer: ReturnType<typeof setInterval> | undefined
+let topSellingTimer: ReturnType<typeof setInterval> | undefined
 
 const stopAutoPoster = () => {
   if (posterTimer) {
@@ -67,19 +69,40 @@ const startAutoPoster = () => {
 const handleVisibilityChange = () => {
   if (document.hidden) {
     stopAutoPoster()
+    stopAutoFlashSale()
+    stopAutoTopSelling()
     return
   }
   startAutoPoster()
+  startAutoFlashSale()
+  startAutoTopSelling()
+}
+
+const showBackToTop = ref(false)
+
+const handlePageScroll = () => {
+  showBackToTop.value = window.scrollY > 320
+}
+
+const scrollToTop = () => {
+  window.scrollTo({ top: 0, behavior: 'smooth' })
 }
 
 onMounted(() => {
   startAutoPoster()
+  startAutoFlashSale()
+  startAutoTopSelling()
   document.addEventListener('visibilitychange', handleVisibilityChange)
+  window.addEventListener('scroll', handlePageScroll, { passive: true })
+  handlePageScroll()
 })
 
 onUnmounted(() => {
   stopAutoPoster()
+  stopAutoFlashSale()
+  stopAutoTopSelling()
   document.removeEventListener('visibilitychange', handleVisibilityChange)
+  window.removeEventListener('scroll', handlePageScroll)
 })
 
 const featuredQuickCategories = [
@@ -349,6 +372,158 @@ const currentPoster = computed(() => {
   return carouselPosters[activePoster.value] ?? carouselPosters[0] ?? defaultPoster
 })
 
+const buildSlideWindows = <T>(items: T[], size: number): T[][] => {
+  if (!items.length) return []
+
+  // If we have size or fewer items, rotate order so users can still slide card-by-card.
+  if (items.length <= size) {
+    return items.map((_, start) => {
+      return Array.from({ length: size }, (_, offset) => items[(start + offset) % items.length]!)
+    })
+  }
+
+  const windows: T[][] = []
+  for (let index = 0; index <= items.length - size; index += 1) {
+    windows.push(items.slice(index, index + size))
+  }
+  return windows
+}
+
+const activeFlashSaleSlide = ref(0)
+const flashSaleSlides = computed(() => buildSlideWindows(flashSaleItems, 4))
+
+const activeTopSellingSlide = ref(0)
+const topSellingSlides = computed(() => buildSlideWindows(topSellingProducts, 4))
+
+const getSwipeClientX = (event: TouchEvent | MouseEvent): number | null => {
+  if ('touches' in event) {
+    if (event.touches.length > 0) return event.touches[0]!.clientX
+    if (event.changedTouches.length > 0) return event.changedTouches[0]!.clientX
+    return null
+  }
+  return event.clientX
+}
+
+const swipeThreshold = 36
+const flashSwipeStartX = ref<number | null>(null)
+const topSwipeStartX = ref<number | null>(null)
+
+const goToFlashSaleSlide = (index: number) => {
+  const total = flashSaleSlides.value.length
+  if (!total) return
+  activeFlashSaleSlide.value = (index + total) % total
+}
+
+const nextFlashSaleSlide = () => {
+  goToFlashSaleSlide(activeFlashSaleSlide.value + 1)
+}
+
+const prevFlashSaleSlide = () => {
+  goToFlashSaleSlide(activeFlashSaleSlide.value - 1)
+}
+
+const stopAutoFlashSale = () => {
+  if (flashSaleTimer) {
+    clearInterval(flashSaleTimer)
+    flashSaleTimer = undefined
+  }
+}
+
+const startAutoFlashSale = () => {
+  if (flashSaleTimer || flashSaleSlides.value.length < 2) return
+  flashSaleTimer = setInterval(() => {
+    nextFlashSaleSlide()
+  }, 3500)
+}
+
+const restartAutoFlashSale = () => {
+  stopAutoFlashSale()
+  startAutoFlashSale()
+}
+
+const handleFlashSwipeStart = (event: TouchEvent | MouseEvent) => {
+  flashSwipeStartX.value = getSwipeClientX(event)
+}
+
+const handleFlashSwipeEnd = (event: TouchEvent | MouseEvent) => {
+  const endX = getSwipeClientX(event)
+  if (flashSwipeStartX.value === null || endX === null) {
+    flashSwipeStartX.value = null
+    return
+  }
+
+  const distance = endX - flashSwipeStartX.value
+  if (Math.abs(distance) >= swipeThreshold) {
+    if (distance < 0) nextFlashSaleSlide()
+    else prevFlashSaleSlide()
+    restartAutoFlashSale()
+  }
+  flashSwipeStartX.value = null
+}
+
+const handleFlashMouseLeave = () => {
+  flashSwipeStartX.value = null
+  startAutoFlashSale()
+}
+
+const goToTopSellingSlide = (index: number) => {
+  const total = topSellingSlides.value.length
+  if (!total) return
+  activeTopSellingSlide.value = (index + total) % total
+}
+
+const nextTopSellingSlide = () => {
+  goToTopSellingSlide(activeTopSellingSlide.value + 1)
+}
+
+const prevTopSellingSlide = () => {
+  goToTopSellingSlide(activeTopSellingSlide.value - 1)
+}
+
+const stopAutoTopSelling = () => {
+  if (topSellingTimer) {
+    clearInterval(topSellingTimer)
+    topSellingTimer = undefined
+  }
+}
+
+const startAutoTopSelling = () => {
+  if (topSellingTimer || topSellingSlides.value.length < 2) return
+  topSellingTimer = setInterval(() => {
+    nextTopSellingSlide()
+  }, 3900)
+}
+
+const restartAutoTopSelling = () => {
+  stopAutoTopSelling()
+  startAutoTopSelling()
+}
+
+const handleTopSellingSwipeStart = (event: TouchEvent | MouseEvent) => {
+  topSwipeStartX.value = getSwipeClientX(event)
+}
+
+const handleTopSellingSwipeEnd = (event: TouchEvent | MouseEvent) => {
+  const endX = getSwipeClientX(event)
+  if (topSwipeStartX.value === null || endX === null) {
+    topSwipeStartX.value = null
+    return
+  }
+
+  const distance = endX - topSwipeStartX.value
+  if (Math.abs(distance) >= swipeThreshold) {
+    if (distance < 0) nextTopSellingSlide()
+    else prevTopSellingSlide()
+    restartAutoTopSelling()
+  }
+  topSwipeStartX.value = null
+}
+
+const handleTopSellingMouseLeave = () => {
+  topSwipeStartX.value = null
+  startAutoTopSelling()
+}
+
 const productCard =
   'group overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm transition duration-300 hover:-translate-y-1 hover:border-slate-300 hover:shadow-lg'
 const productThumb = 'h-40 w-full object-cover transition duration-300 group-hover:scale-105'
@@ -529,29 +704,72 @@ const topSellingThumb = 'h-52 w-full object-cover transition duration-300 group-
           </button>
         </div>
 
-        <div class="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-          <article v-for="item in flashSaleItems" :key="item.name" :class="limitedOfferCard">
-            <div class="relative overflow-hidden">
-              <img :src="item.image" :alt="item.name" :class="limitedOfferThumb" loading="lazy" />
-              <span
-                v-if="item.badge"
-                class="absolute left-3 top-3 rounded-full bg-rose-500 px-2.5 py-1 text-xs font-semibold text-white"
-              >
-                {{ item.badge }}
-              </span>
-            </div>
-            <div class="p-4">
-              <p class="text-xs text-slate-500">{{ item.category }}</p>
-              <h3 class="mt-1 text-base font-semibold text-ink">{{ item.name }}</h3>
-              <div class="mt-2 flex items-center gap-2">
-                <span class="text-lg font-bold text-amber-700">{{ item.price }}</span>
-                <span class="text-sm text-slate-400 line-through">{{ item.oldPrice }}</span>
+        <div
+          class="relative overflow-hidden"
+          @mouseenter="stopAutoFlashSale"
+          @mouseleave="handleFlashMouseLeave"
+          @mousedown="handleFlashSwipeStart"
+          @mouseup="handleFlashSwipeEnd"
+          @touchstart="handleFlashSwipeStart"
+          @touchend="handleFlashSwipeEnd"
+          @touchcancel="flashSwipeStartX = null"
+        >
+          <button
+            type="button"
+            class="absolute left-2 top-1/2 z-10 hidden h-9 w-9 -translate-y-1/2 items-center justify-center rounded-full border border-amber-200 bg-white/95 text-amber-700 shadow-sm transition hover:border-amber-400 hover:bg-white lg:flex"
+            aria-label="Previous flash sale slide"
+            @click="prevFlashSaleSlide(); restartAutoFlashSale()"
+          >
+            ‹
+          </button>
+          <button
+            type="button"
+            class="absolute right-2 top-1/2 z-10 hidden h-9 w-9 -translate-y-1/2 items-center justify-center rounded-full border border-amber-200 bg-white/95 text-amber-700 shadow-sm transition hover:border-amber-400 hover:bg-white lg:flex"
+            aria-label="Next flash sale slide"
+            @click="nextFlashSaleSlide(); restartAutoFlashSale()"
+          >
+            ›
+          </button>
+          <div class="flex transition-transform duration-500 ease-out" :style="{ transform: `translateX(-${activeFlashSaleSlide * 100}%)` }">
+            <div v-for="(slide, slideIndex) in flashSaleSlides" :key="`flash-sale-slide-${slideIndex}`" class="w-full shrink-0">
+              <div class="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+                <article v-for="item in slide" :key="item.name" :class="limitedOfferCard">
+                  <div class="relative overflow-hidden">
+                    <img :src="item.image" :alt="item.name" :class="limitedOfferThumb" loading="lazy" />
+                    <span
+                      v-if="item.badge"
+                      class="absolute left-3 top-3 rounded-full bg-rose-500 px-2.5 py-1 text-xs font-semibold text-white"
+                    >
+                      {{ item.badge }}
+                    </span>
+                  </div>
+                  <div class="p-4">
+                    <p class="text-xs text-slate-500">{{ item.category }}</p>
+                    <h3 class="mt-1 text-base font-semibold text-ink">{{ item.name }}</h3>
+                    <div class="mt-2 flex items-center gap-2">
+                      <span class="text-lg font-bold text-amber-700">{{ item.price }}</span>
+                      <span class="text-sm text-slate-400 line-through">{{ item.oldPrice }}</span>
+                    </div>
+                    <button class="mt-4 w-full rounded-xl bg-amber-600 px-3 py-2.5 text-sm font-semibold text-white hover:bg-amber-700" type="button">
+                      Add to cart
+                    </button>
+                  </div>
+                </article>
               </div>
-              <button class="mt-4 w-full rounded-xl bg-amber-600 px-3 py-2.5 text-sm font-semibold text-white hover:bg-amber-700" type="button">
-                Add to cart
-              </button>
             </div>
-          </article>
+          </div>
+        </div>
+
+        <div class="mt-4 flex items-center justify-center gap-2">
+          <button
+            v-for="(_, dotIndex) in flashSaleSlides"
+            :key="`flash-sale-dot-${dotIndex}`"
+            type="button"
+            class="h-2.5 rounded-full transition"
+            :class="activeFlashSaleSlide === dotIndex ? 'w-6 bg-amber-600' : 'w-2.5 bg-amber-200 hover:bg-amber-300'"
+            :aria-label="`Go to flash sale slide ${dotIndex + 1}`"
+            @click="goToFlashSaleSlide(dotIndex); restartAutoFlashSale()"
+          ></button>
         </div>
       </section>
 
@@ -563,41 +781,84 @@ const topSellingThumb = 'h-52 w-full object-cover transition duration-300 group-
           </div>
         </div>
 
-        <div class="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-          <article
-            v-for="item in topSellingProducts"
-            :key="item.name"
-            :class="topSellingCard"
+        <div
+          class="relative overflow-hidden"
+          @mouseenter="stopAutoTopSelling"
+          @mouseleave="handleTopSellingMouseLeave"
+          @mousedown="handleTopSellingSwipeStart"
+          @mouseup="handleTopSellingSwipeEnd"
+          @touchstart="handleTopSellingSwipeStart"
+          @touchend="handleTopSellingSwipeEnd"
+          @touchcancel="topSwipeStartX = null"
+        >
+          <button
+            type="button"
+            class="absolute left-2 top-1/2 z-10 hidden h-9 w-9 -translate-y-1/2 items-center justify-center rounded-full border border-emerald-200 bg-white/95 text-emerald-700 shadow-sm transition hover:border-emerald-400 hover:bg-white lg:flex"
+            aria-label="Previous top selling slide"
+            @click="prevTopSellingSlide(); restartAutoTopSelling()"
           >
-            <div class="overflow-hidden">
-              <img
-                :src="item.image"
-                :alt="item.name"
-                :class="topSellingThumb"
-                loading="lazy"
-              />
-            </div>
-            <div class="p-4">
-              <span class="inline-flex rounded-full bg-emerald-100 px-3 py-1 text-xs font-semibold text-emerald-700">{{ item.tag }}</span>
-              <h3 class="mt-2 text-base font-semibold text-ink">{{ item.name }}</h3>
-              <div class="mt-2 flex items-center gap-2">
-                <span class="text-lg font-bold text-emerald-700">{{ item.price }}</span>
-                <span class="text-sm text-slate-400 line-through">{{ item.oldPrice }}</span>
-              </div>
-              <p class="mt-1 text-sm font-medium text-emerald-700">{{ item.save }}</p>
-              <div class="mt-3 grid grid-cols-2 gap-2">
-                <button
-                  class="rounded-xl border border-emerald-200 px-3 py-2.5 text-sm font-semibold text-emerald-700 transition hover:border-emerald-500"
-                  type="button"
+            ‹
+          </button>
+          <button
+            type="button"
+            class="absolute right-2 top-1/2 z-10 hidden h-9 w-9 -translate-y-1/2 items-center justify-center rounded-full border border-emerald-200 bg-white/95 text-emerald-700 shadow-sm transition hover:border-emerald-400 hover:bg-white lg:flex"
+            aria-label="Next top selling slide"
+            @click="nextTopSellingSlide(); restartAutoTopSelling()"
+          >
+            ›
+          </button>
+          <div class="flex transition-transform duration-500 ease-out" :style="{ transform: `translateX(-${activeTopSellingSlide * 100}%)` }">
+            <div v-for="(slide, slideIndex) in topSellingSlides" :key="`top-selling-slide-${slideIndex}`" class="w-full shrink-0">
+              <div class="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+                <article
+                  v-for="item in slide"
+                  :key="item.name"
+                  :class="topSellingCard"
                 >
-                  Add To Cart
-                </button>
-                <button class="rounded-xl bg-emerald-600 px-3 py-2.5 text-sm font-semibold text-white hover:bg-emerald-700" type="button">
-                  Buy now
-                </button>
+                  <div class="overflow-hidden">
+                    <img
+                      :src="item.image"
+                      :alt="item.name"
+                      :class="topSellingThumb"
+                      loading="lazy"
+                    />
+                  </div>
+                  <div class="p-4">
+                    <span class="inline-flex rounded-full bg-emerald-100 px-3 py-1 text-xs font-semibold text-emerald-700">{{ item.tag }}</span>
+                    <h3 class="mt-2 text-base font-semibold text-ink">{{ item.name }}</h3>
+                    <div class="mt-2 flex items-center gap-2">
+                      <span class="text-lg font-bold text-emerald-700">{{ item.price }}</span>
+                      <span class="text-sm text-slate-400 line-through">{{ item.oldPrice }}</span>
+                    </div>
+                    <p class="mt-1 text-sm font-medium text-emerald-700">{{ item.save }}</p>
+                    <div class="mt-3 grid grid-cols-2 gap-2">
+                      <button
+                        class="rounded-xl border border-emerald-200 px-3 py-2.5 text-sm font-semibold text-emerald-700 transition hover:border-emerald-500"
+                        type="button"
+                      >
+                        Add To Cart
+                      </button>
+                      <button class="rounded-xl bg-emerald-600 px-3 py-2.5 text-sm font-semibold text-white hover:bg-emerald-700" type="button">
+                        Buy now
+                      </button>
+                    </div>
+                  </div>
+                </article>
               </div>
             </div>
-          </article>
+          </div>
+        </div>
+
+        <div class="mt-4 flex items-center justify-center gap-2">
+          <button
+            v-for="(_, dotIndex) in topSellingSlides"
+            :key="`top-selling-dot-${dotIndex}`"
+            type="button"
+            class="h-2.5 rounded-full transition"
+            :class="activeTopSellingSlide === dotIndex ? 'w-6 bg-emerald-600' : 'w-2.5 bg-emerald-200 hover:bg-emerald-300'"
+            :aria-label="`Go to top selling slide ${dotIndex + 1}`"
+            @click="goToTopSellingSlide(dotIndex); restartAutoTopSelling()"
+          ></button>
         </div>
       </section>
 
@@ -766,17 +1027,38 @@ const topSellingThumb = 'h-52 w-full object-cover transition duration-300 group-
         </div>
       </div>
       <div class="flex flex-wrap items-center justify-between gap-3 border-t border-slate-100 px-5 py-3 text-xs text-slate-500 md:text-sm">
-        <p>Copyright © 2026 GhorerBazar</p>
+        <p>Copyright © 2026 BazarPro</p>
         <div class="flex items-center gap-2">
-          <span class="text-[11px] uppercase tracking-wide text-slate-400">payment-img</span>
+          <span class="text-[11px] uppercase tracking-wide text-slate-400"></span>
           <img
-            src="https://developer.sslcommerz.com/wp-content/uploads/2019/03/SSLCommerz-Pay-With-logo-All-Size-01.png"
-            alt="SSLCommerz payment methods"
-            class="h-7 w-auto rounded bg-white p-1"
+            src="https://backoffice.ghorerbazar.com/company_logo/faysy1756641916.png"
+            alt="GhorerBazar payment methods"
+            class="h-32 w-auto rounded bg-white p-1"
             loading="lazy"
           />
         </div>
       </div>
     </footer>
+
+    <button
+      type="button"
+      class="fixed bottom-5 right-5 z-30 flex h-11 w-11 items-center justify-center rounded-full border border-brand/30 bg-white text-brand shadow-lg transition duration-300 hover:-translate-y-0.5 hover:border-brand hover:bg-brand hover:text-white"
+      :class="showBackToTop ? 'pointer-events-auto opacity-100' : 'pointer-events-none opacity-0'"
+      aria-label="Back to top"
+      @click="scrollToTop"
+    >
+      <svg
+        class="h-5 w-5"
+        viewBox="0 0 24 24"
+        fill="none"
+        stroke="currentColor"
+        stroke-width="2"
+        stroke-linecap="round"
+        stroke-linejoin="round"
+        aria-hidden="true"
+      >
+        <path d="m18 15-6-6-6 6" />
+      </svg>
+    </button>
   </div>
 </template>
