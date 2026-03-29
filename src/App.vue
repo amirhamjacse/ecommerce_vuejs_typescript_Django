@@ -491,6 +491,8 @@ const detailQty = ref(1)
 const activeDetailImage = ref(0)
 const isImageZoomed = ref(false)
 const zoomedImageIndex = ref(0)
+const moreProductsListRef = ref<HTMLDivElement | null>(null)
+const moreProductsActiveIndex = ref(0)
 
 const defaultProductReviews: ProductReview[] = [
   {
@@ -557,6 +559,48 @@ const relatedProductPool = computed<ProductPreview[]>(() => {
   }))
 })
 
+const moreProductsSidebarList = computed(() => {
+  const currentName = selectedProduct.value?.name
+  const list = relatedProductPool.value.filter((product) => product.name !== currentName)
+  return list.slice(0, 24)
+})
+
+const focusMoreProductsItem = (index: number) => {
+  const list = moreProductsSidebarList.value
+  if (!list.length) return
+
+  const clampedIndex = Math.max(0, Math.min(index, list.length - 1))
+  moreProductsActiveIndex.value = clampedIndex
+
+  const itemEl = moreProductsListRef.value?.querySelector<HTMLButtonElement>(`[data-more-product-index="${clampedIndex}"]`)
+  itemEl?.focus()
+  itemEl?.scrollIntoView({ block: 'nearest' })
+}
+
+const handleMoreProductsKeydown = (event: KeyboardEvent) => {
+  if (!moreProductsSidebarList.value.length) return
+
+  if (event.key === 'ArrowDown') {
+    event.preventDefault()
+    focusMoreProductsItem(moreProductsActiveIndex.value + 1)
+    return
+  }
+
+  if (event.key === 'ArrowUp') {
+    event.preventDefault()
+    focusMoreProductsItem(moreProductsActiveIndex.value - 1)
+    return
+  }
+
+  if (event.key === 'ArrowRight' || event.key === 'Enter') {
+    event.preventDefault()
+    const activeItem = moreProductsSidebarList.value[moreProductsActiveIndex.value]
+    if (activeItem) {
+      openProductDetail(activeItem)
+    }
+  }
+}
+
 const isDetailPageShown = computed(() => {
   return route.name === 'product-detail'
 })
@@ -616,6 +660,13 @@ watch(
     }
   },
   { immediate: true }
+)
+
+watch(
+  () => [selectedProduct.value?.name, moreProductsSidebarList.value.length],
+  () => {
+    moreProductsActiveIndex.value = 0
+  }
 )
 
 const openCart = () => {
@@ -1315,7 +1366,7 @@ const topSellingThumb = 'h-52 w-full object-cover transition duration-300 group-
       </section>
 
       <!-- Main Content Grid: Left (all content) + Right (sidebar) -->
-      <div class="grid gap-5 lg:grid-cols-[1fr_320px]">
+      <div class="grid gap-5 lg:grid-cols-[1fr_400px]">
         <!-- Left: All Sections -->
         <div class="space-y-6 md:space-y-7">
           <section class="rounded-2xl border border-slate-200 bg-white/95 p-4 shadow-sm ring-1 ring-slate-100 md:p-6">
@@ -1532,27 +1583,35 @@ const topSellingThumb = 'h-52 w-full object-cover transition duration-300 group-
 
         <!-- Right: Sticky Sidebar -->
         <aside class="hidden lg:block">
-          <div class="sticky top-4 h-[calc(100vh-100px)] flex flex-col rounded-lg border border-slate-200 bg-gradient-to-br from-emerald-50 to-white p-4 shadow-md">
-            <h4 class="text-sm font-semibold text-ink">Related Products</h4>
-            <div class="mt-3 flex-1 space-y-2 overflow-y-auto pr-1">
+          <div
+            class="sticky top-3 h-[calc(100vh-56px)] flex flex-col rounded-lg border border-slate-200 bg-gradient-to-br from-emerald-50 to-white p-4 shadow-md"
+            tabindex="0"
+            @keydown="handleMoreProductsKeydown"
+          >
+            <h4 class="text-sm font-semibold text-ink">More Products</h4>
+            <div ref="moreProductsListRef" class="mt-3 flex-1 space-y-2 overflow-y-auto pr-1">
               <button
-                v-for="product in relatedProductPool.slice(0, 15)"
+                v-for="(product, productIndex) in moreProductsSidebarList"
                 :key="product.name"
                 type="button"
-                class="group flex w-full gap-2.5 overflow-hidden rounded-lg border border-slate-200 bg-white p-2.5 transition hover:border-brand hover:bg-emerald-50"
+                :data-more-product-index="productIndex"
+                class="group flex w-full gap-3 overflow-hidden rounded-lg border bg-white p-3 transition hover:border-brand hover:bg-emerald-50 focus:outline-none"
+                :class="productIndex === moreProductsActiveIndex ? 'border-brand ring-1 ring-emerald-300' : 'border-slate-200'"
                 @click="openProductDetail(product)"
+                @focus="moreProductsActiveIndex = productIndex"
+                @mouseenter="moreProductsActiveIndex = productIndex"
               >
-                <div class="relative h-16 w-16 flex-shrink-0 overflow-hidden rounded-md">
+                <div class="relative h-20 w-20 flex-shrink-0 overflow-hidden rounded-md">
                   <img :src="product.image" :alt="product.name" class="h-full w-full object-cover transition group-hover:scale-105" loading="lazy" />
                   <div v-if="product.badge" class="absolute inset-0 flex items-end justify-end">
                     <span class="bg-rose-500 px-1 py-0.5 text-[9px] font-bold text-white">{{ product.badge }}</span>
                   </div>
                 </div>
                 <div class="flex-1 min-w-0">
-                  <p class="line-clamp-2 text-xs font-semibold text-slate-900">{{ product.name }}</p>
-                  <p v-if="product.category" class="mt-0.5 text-[10px] text-slate-500">{{ product.category }}</p>
-                  <p class="mt-1 text-xs font-bold text-brand">{{ product.price }}</p>
-                  <p v-if="product.oldPrice" class="text-[9px] text-slate-400 line-through">{{ product.oldPrice }}</p>
+                  <p class="line-clamp-2 text-sm font-semibold text-slate-900">{{ product.name }}</p>
+                  <p v-if="product.category" class="mt-0.5 text-xs text-slate-500">{{ product.category }}</p>
+                  <p class="mt-1 text-sm font-bold text-brand">{{ product.price }}</p>
+                  <p v-if="product.oldPrice" class="text-xs text-slate-400 line-through">{{ product.oldPrice }}</p>
                 </div>
               </button>
             </div>
