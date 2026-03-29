@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue'
+import { downloadInvoicePdf } from '@/utils/invoicePdf'
 
 type CartItem = {
   id: string
@@ -151,12 +152,7 @@ const downloadCheckoutInvoice = () => {
   if (typeof window === 'undefined') return
 
   const invoiceText = buildCheckoutInvoiceText()
-  const blob = new Blob([invoiceText], { type: 'text/plain;charset=utf-8' })
-  const link = document.createElement('a')
-  link.href = URL.createObjectURL(blob)
-  link.download = `${invoiceId.value}.txt`
-  link.click()
-  URL.revokeObjectURL(link.href)
+  downloadInvoicePdf(invoiceId.value, 'Checkout Invoice', invoiceText.split('\n'))
 }
 </script>
 

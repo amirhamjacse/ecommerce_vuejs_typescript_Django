@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue'
+import { downloadInvoicePdf } from '@/utils/invoicePdf'
 
 type UserRole = 'customer' | 'admin'
 
@@ -616,16 +617,6 @@ const openInvoiceWindow = (title: string, invoiceText: string) => {
   popup.document.close()
 }
 
-const downloadInvoiceText = (fileName: string, invoiceText: string) => {
-  if (typeof window === 'undefined') return
-  const blob = new Blob([invoiceText], { type: 'text/plain;charset=utf-8' })
-  const link = document.createElement('a')
-  link.href = URL.createObjectURL(blob)
-  link.download = fileName
-  link.click()
-  URL.revokeObjectURL(link.href)
-}
-
 const viewPosInvoice = (receipt: PosReceipt) => {
   activePosInvoice.value = receipt
   const invoiceText = buildPosInvoiceTextFromReceipt(receipt)
@@ -634,7 +625,7 @@ const viewPosInvoice = (receipt: PosReceipt) => {
 
 const downloadPosInvoice = (receipt: PosReceipt) => {
   const invoiceText = buildPosInvoiceTextFromReceipt(receipt)
-  downloadInvoiceText(`${receipt.invoiceId}.txt`, invoiceText)
+  downloadInvoicePdf(receipt.invoiceId, `POS Invoice ${receipt.invoiceId}`, invoiceText.split('\n'))
 }
 
 const viewCurrentPosInvoice = () => {
@@ -646,7 +637,7 @@ const viewCurrentPosInvoice = () => {
 const downloadCurrentPosInvoice = () => {
   if (!posCart.value.length) return
   const invoiceText = buildPosInvoiceTextFromCurrentSale()
-  downloadInvoiceText(`${posInvoicePreviewId.value}.txt`, invoiceText)
+  downloadInvoicePdf(posInvoicePreviewId.value, `POS Invoice ${posInvoicePreviewId.value}`, invoiceText.split('\n'))
 }
 
 const completePosSale = () => {
