@@ -751,6 +751,12 @@ const goToSignup = () => {
   router.push({ name: 'signup' })
 }
 
+const goToHome = () => {
+  closeWishlist()
+  closeCart()
+  router.push({ name: 'home' })
+}
+
 const goToProfile = () => {
   if (!isLoggedIn.value) {
     goToLogin()
@@ -1538,8 +1544,15 @@ const topSellingThumb = 'h-52 w-full object-cover transition duration-300 group-
       <UserProfilePage :current-user="currentUser" :is-admin-user="isAdminUser" @logout="logout" @go-login="goToLogin" @go-admin="goToAdminDashboard" />
     </main>
 
-    <main v-else-if="isAdminPageShown" class="mt-6">
-      <AdminDashboardPage :current-user="currentUser" :is-admin-user="isAdminUser" @go-login="goToLogin" />
+    <main v-else-if="isAdminPageShown">
+      <AdminDashboardPage
+        :current-user="currentUser"
+        :is-admin-user="isAdminUser"
+        @go-login="goToLogin"
+        @go-main-site="goToHome"
+        @go-profile="goToProfile"
+        @logout="logout"
+      />
     </main>
 
     <main v-else-if="isCheckoutPageShown" class="mt-6">
