@@ -65,6 +65,8 @@ const prevPoster = () => {
 let posterTimer: ReturnType<typeof setInterval> | undefined
 let flashSaleTimer: ReturnType<typeof setInterval> | undefined
 let topSellingTimer: ReturnType<typeof setInterval> | undefined
+let cartToastTimer: ReturnType<typeof setTimeout> | undefined
+let cartShakeTimer: ReturnType<typeof setTimeout> | undefined
 
 const stopAutoPoster = () => {
   if (posterTimer) {
@@ -115,6 +117,14 @@ onUnmounted(() => {
   stopAutoPoster()
   stopAutoFlashSale()
   stopAutoTopSelling()
+  if (cartToastTimer) {
+    clearTimeout(cartToastTimer)
+    cartToastTimer = undefined
+  }
+  if (cartShakeTimer) {
+    clearTimeout(cartShakeTimer)
+    cartShakeTimer = undefined
+  }
   document.removeEventListener('visibilitychange', handleVisibilityChange)
   window.removeEventListener('scroll', handlePageScroll)
 })
@@ -405,6 +415,11 @@ const buildCartId = (name: string): string => {
 
 const isCartOpen = ref(false)
 const cartItems = ref<CartItem[]>([])
+const cartToastMessage = ref('')
+const showCartToast = ref(false)
+const cartShake = ref(false)
+const wishlistLimit = 50
+const wishlistIds = ref<string[]>([])
 
 const cartCount = computed(() => {
   return cartItems.value.reduce((total, item) => total + item.qty, 0)
@@ -412,6 +427,10 @@ const cartCount = computed(() => {
 
 const cartSubtotal = computed(() => {
   return cartItems.value.reduce((total, item) => total + item.unitPrice * item.qty, 0)
+})
+
+const wishlistCount = computed(() => {
+  return wishlistIds.value.length
 })
 
 const openCart = () => {
@@ -422,11 +441,61 @@ const closeCart = () => {
   isCartOpen.value = false
 }
 
+const triggerToast = (message: string) => {
+  cartToastMessage.value = message
+  showCartToast.value = true
+
+  if (cartToastTimer) {
+    clearTimeout(cartToastTimer)
+  }
+
+  cartToastTimer = setTimeout(() => {
+    showCartToast.value = false
+  }, 1800)
+}
+
+const triggerCartToast = (productName: string) => {
+  triggerToast(`${productName} added to cart`)
+  cartShake.value = true
+
+  if (cartShakeTimer) {
+    clearTimeout(cartShakeTimer)
+  }
+
+  cartShakeTimer = setTimeout(() => {
+    cartShake.value = false
+  }, 520)
+}
+
+const isWishlisted = (name: string) => {
+  return wishlistIds.value.includes(buildCartId(name))
+}
+
+const toggleWishlist = (item: CartProduct) => {
+  const id = buildCartId(item.name)
+  const exists = wishlistIds.value.includes(id)
+
+  if (exists) {
+    wishlistIds.value = wishlistIds.value.filter((wishlistId) => wishlistId !== id)
+    triggerToast(`${item.name} removed from wishlist`)
+    return
+  }
+
+  if (wishlistIds.value.length >= wishlistLimit) {
+    triggerToast(`Wishlist limit is ${wishlistLimit} items`)
+    return
+  }
+
+  wishlistIds.value.unshift(id)
+  triggerToast(`${item.name} added to wishlist`)
+}
+
 const addToCart = (item: CartProduct) => {
   const id = buildCartId(item.name)
   const existing = cartItems.value.find((cartItem) => cartItem.id === id)
   if (existing) {
     existing.qty += 1
+    triggerCartToast(item.name)
     return
   }
 
@@ -437,6 +506,8 @@ const addToCart = (item: CartProduct) => {
     unitPrice: parsePrice(item.price),
     qty: 1,
   })
+
+  triggerCartToast(item.name)
 }
 
 const incrementCartItem = (id: string) => {
@@ -708,7 +779,7 @@ const topSellingThumb = 'h-52 w-full object-cover transition duration-300 group-
             <svg class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
               <path d="M20.8 4.6a5.5 5.5 0 0 0-7.8 0L12 5.6l-1-1a5.5 5.5 0 0 0-7.8 7.8l1 1L12 21l7.8-7.6 1-1a5.5 5.5 0 0 0 0-7.8z" />
             </svg>
-            <span>Wishlist</span>
+            <span>Wishlist ({{ wishlistCount }})</span>
           </button>
           <button
             class="inline-flex items-center gap-2 rounded-xl bg-brand px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-brand-dark"
@@ -777,8 +848,10 @@ const topSellingThumb = 'h-52 w-full object-cover transition duration-300 group-
               <img :src="item.image" :alt="item.name" class="h-14 w-14 rounded-lg object-cover" loading="lazy" />
               <div class="min-w-0 flex-1">
                 <p class="line-clamp-2 text-sm font-semibold text-ink">{{ item.name }}</p>
-                <p class="text-xs text-slate-500">{{ formatPrice(item.unitPrice) }} each</p>
-                <p class="mt-1 text-sm font-semibold text-brand">{{ formatPrice(item.unitPrice * item.qty) }}</p>
+                <p class="mt-1 text-xs font-medium text-slate-600">
+                  {{ formatPrice(item.unitPrice) }} × {{ item.qty }} =
+                  <span class="font-bold text-brand">{{ formatPrice(item.unitPrice * item.qty) }}</span>
+                </p>
               </div>
             </div>
 
@@ -803,10 +876,14 @@ const topSellingThumb = 'h-52 w-full object-cover transition duration-300 group-
 
               <button
                 type="button"
-                class="text-xs font-semibold text-rose-600 hover:text-rose-700"
+                class="inline-flex h-8 w-8 items-center justify-center rounded-full border border-rose-200 text-rose-600 transition hover:bg-rose-50 hover:text-rose-700"
                 @click="removeCartItem(item.id)"
+                aria-label="Remove item"
               >
-                Remove
+                <svg class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                  <path d="M18 6 6 18" />
+                  <path d="m6 6 12 12" />
+                </svg>
               </button>
             </div>
           </article>
@@ -991,13 +1068,39 @@ const topSellingThumb = 'h-52 w-full object-cover transition duration-300 group-
                   </div>
                   <div class="p-4">
                     <p class="text-xs text-slate-500">{{ item.category }}</p>
-                    <h3 class="mt-1 text-base font-semibold text-ink">{{ item.name }}</h3>
+                    <div class="mt-1 flex items-start justify-between gap-2">
+                      <h3 class="text-base font-semibold text-ink">{{ item.name }}</h3>
+                      <button
+                        type="button"
+                        class="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-full border border-slate-200 transition hover:border-rose-300 hover:bg-rose-50"
+                        :aria-label="isWishlisted(item.name) ? 'Remove from wishlist' : 'Add to wishlist'"
+                        @click="toggleWishlist(item)"
+                      >
+                        <svg
+                          class="h-4 w-4"
+                          viewBox="0 0 24 24"
+                          :class="isWishlisted(item.name) ? 'fill-rose-500 text-rose-500' : 'fill-transparent text-slate-400'"
+                          stroke="currentColor"
+                          stroke-width="2"
+                          stroke-linecap="round"
+                          stroke-linejoin="round"
+                          aria-hidden="true"
+                        >
+                          <path d="M20.8 4.6a5.5 5.5 0 0 0-7.8 0L12 5.6l-1-1a5.5 5.5 0 0 0-7.8 7.8l1 1L12 21l7.8-7.6 1-1a5.5 5.5 0 0 0 0-7.8z" />
+                        </svg>
+                      </button>
+                    </div>
                     <div class="mt-2 flex items-center gap-2">
                       <span class="text-lg font-bold text-amber-700">{{ item.price }}</span>
                       <span class="text-sm text-slate-400 line-through">{{ item.oldPrice }}</span>
                     </div>
-                    <button class="mt-4 w-full rounded-xl bg-amber-600 px-3 py-2.5 text-sm font-semibold text-white hover:bg-amber-700" type="button" @click="addToCart(item)">
-                      Add to cart
+                    <button class="mt-4 inline-flex w-full items-center justify-center gap-1.5 rounded-xl bg-amber-600 px-3 py-2.5 text-sm font-semibold text-white hover:bg-amber-700" type="button" @click="addToCart(item)">
+                      <svg class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                        <circle cx="9" cy="20" r="1" />
+                        <circle cx="17" cy="20" r="1" />
+                        <path d="M5 5h2l2 10h9l2-7H8" />
+                      </svg>
+                      <span>Add to cart</span>
                     </button>
                   </div>
                 </article>
@@ -1071,7 +1174,28 @@ const topSellingThumb = 'h-52 w-full object-cover transition duration-300 group-
                   </div>
                   <div class="p-4">
                     <span class="inline-flex rounded-full bg-emerald-100 px-3 py-1 text-xs font-semibold text-emerald-700">{{ item.tag }}</span>
-                    <h3 class="mt-2 text-base font-semibold text-ink">{{ item.name }}</h3>
+                    <div class="mt-2 flex items-start justify-between gap-2">
+                      <h3 class="text-base font-semibold text-ink">{{ item.name }}</h3>
+                      <button
+                        type="button"
+                        class="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-full border border-slate-200 transition hover:border-rose-300 hover:bg-rose-50"
+                        :aria-label="isWishlisted(item.name) ? 'Remove from wishlist' : 'Add to wishlist'"
+                        @click="toggleWishlist(item)"
+                      >
+                        <svg
+                          class="h-4 w-4"
+                          viewBox="0 0 24 24"
+                          :class="isWishlisted(item.name) ? 'fill-rose-500 text-rose-500' : 'fill-transparent text-slate-400'"
+                          stroke="currentColor"
+                          stroke-width="2"
+                          stroke-linecap="round"
+                          stroke-linejoin="round"
+                          aria-hidden="true"
+                        >
+                          <path d="M20.8 4.6a5.5 5.5 0 0 0-7.8 0L12 5.6l-1-1a5.5 5.5 0 0 0-7.8 7.8l1 1L12 21l7.8-7.6 1-1a5.5 5.5 0 0 0 0-7.8z" />
+                        </svg>
+                      </button>
+                    </div>
                     <div class="mt-2 flex items-center gap-2">
                       <span class="text-lg font-bold text-emerald-700">{{ item.price }}</span>
                       <span class="text-sm text-slate-400 line-through">{{ item.oldPrice }}</span>
@@ -1079,11 +1203,16 @@ const topSellingThumb = 'h-52 w-full object-cover transition duration-300 group-
                     <p class="mt-1 text-sm font-medium text-emerald-700">{{ item.save }}</p>
                     <div class="mt-3 grid grid-cols-2 gap-2">
                       <button
-                        class="rounded-xl border border-emerald-200 px-3 py-2.5 text-sm font-semibold text-emerald-700 transition hover:border-emerald-500"
+                        class="inline-flex items-center justify-center gap-1.5 rounded-xl border border-emerald-200 px-3 py-2.5 text-sm font-semibold text-emerald-700 transition hover:border-emerald-500"
                         type="button"
                         @click="addToCart(item)"
                       >
-                        Add To Cart
+                        <svg class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                          <circle cx="9" cy="20" r="1" />
+                          <circle cx="17" cy="20" r="1" />
+                          <path d="M5 5h2l2 10h9l2-7H8" />
+                        </svg>
+                        <span>Add To Cart</span>
                       </button>
                       <button class="rounded-xl bg-emerald-600 px-3 py-2.5 text-sm font-semibold text-white hover:bg-emerald-700" type="button" @click="buyNow(item)">
                         Buy now
@@ -1157,12 +1286,40 @@ const topSellingThumb = 'h-52 w-full object-cover transition duration-300 group-
             </div>
             <div class="p-4">
               <p class="text-xs text-slate-500">{{ item.category }}</p>
-              <h3 class="mt-1 text-[15px] font-semibold text-ink">{{ item.name }}</h3>
+              <div class="mt-1 flex items-start justify-between gap-2">
+                <h3 class="text-[15px] font-semibold text-ink">{{ item.name }}</h3>
+                <button
+                  type="button"
+                  class="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-full border border-slate-200 transition hover:border-rose-300 hover:bg-rose-50"
+                  :aria-label="isWishlisted(item.name) ? 'Remove from wishlist' : 'Add to wishlist'"
+                  @click="toggleWishlist(item)"
+                >
+                  <svg
+                    class="h-4 w-4"
+                    viewBox="0 0 24 24"
+                    :class="isWishlisted(item.name) ? 'fill-rose-500 text-rose-500' : 'fill-transparent text-slate-400'"
+                    stroke="currentColor"
+                    stroke-width="2"
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    aria-hidden="true"
+                  >
+                    <path d="M20.8 4.6a5.5 5.5 0 0 0-7.8 0L12 5.6l-1-1a5.5 5.5 0 0 0-7.8 7.8l1 1L12 21l7.8-7.6 1-1a5.5 5.5 0 0 0 0-7.8z" />
+                  </svg>
+                </button>
+              </div>
               <div class="mt-2 flex items-center gap-2">
                 <span class="text-base font-bold text-brand">{{ item.price }}</span>
                 <span class="text-xs text-slate-400 line-through">{{ item.oldPrice }}</span>
               </div>
-              <button :class="productBtn" type="button" @click="addToCart(item)">Add to cart</button>
+              <button :class="`${productBtn} inline-flex items-center justify-center gap-1.5`" type="button" @click="addToCart(item)">
+                <svg class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                  <circle cx="9" cy="20" r="1" />
+                  <circle cx="17" cy="20" r="1" />
+                  <path d="M5 5h2l2 10h9l2-7H8" />
+                </svg>
+                <span>Add to cart</span>
+              </button>
             </div>
           </article>
         </div>
@@ -1287,10 +1444,22 @@ const topSellingThumb = 'h-52 w-full object-cover transition duration-300 group-
       </div>
     </footer>
 
+    <div
+      class="fixed bottom-5 left-5 z-40 inline-flex items-center gap-2 rounded-xl border border-emerald-200 bg-gradient-to-r from-emerald-50 via-white to-emerald-50 px-4 py-2.5 text-sm font-semibold text-emerald-800 shadow-[0_12px_30px_rgba(16,185,129,0.28)] ring-1 ring-emerald-200/50 transition duration-300"
+      :class="showCartToast ? 'translate-y-0 opacity-100' : 'pointer-events-none translate-y-3 opacity-0'"
+      role="status"
+      aria-live="polite"
+    >
+      <svg class="h-4 w-4 text-emerald-600" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+        <path d="m20 6-11 11-5-5" />
+      </svg>
+      {{ cartToastMessage }}
+    </div>
+
     <button
       type="button"
       class="fixed right-0 top-1/2 z-30 flex w-[84px] -translate-y-1/2 flex-col overflow-hidden rounded-l-2xl border border-r-0 border-brand/35 bg-brand text-white shadow-[-8px_12px_22px_rgba(0,0,0,0.18)] transition duration-300 hover:bg-brand-dark"
-      :class="isCartOpen ? 'pointer-events-none opacity-0' : 'pointer-events-auto opacity-100'"
+      :class="[isCartOpen ? 'pointer-events-none opacity-0' : 'pointer-events-auto opacity-100', cartShake ? 'cart-tab-shake' : '']"
       aria-label="Open cart"
       @click="openCart"
     >
@@ -1340,3 +1509,31 @@ const topSellingThumb = 'h-52 w-full object-cover transition duration-300 group-
     </button>
   </div>
 </template>
+
+<style scoped>
+.cart-tab-shake {
+  animation: cartTabShake 0.52s ease;
+}
+
+@keyframes cartTabShake {
+  0% {
+    transform: translateY(-50%) translateX(0);
+  }
+
+  25% {
+    transform: translateY(-50%) translateX(-6px);
+  }
+
+  50% {
+    transform: translateY(-50%) translateX(5px);
+  }
+
+  75% {
+    transform: translateY(-50%) translateX(-3px);
+  }
+
+  100% {
+    transform: translateY(-50%) translateX(0);
+  }
+}
+</style>
