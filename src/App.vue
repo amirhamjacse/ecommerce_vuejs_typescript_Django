@@ -648,6 +648,10 @@ const isSignupPageShown = computed(() => {
   return route.name === 'signup'
 })
 
+const isAuthPageShown = computed(() => {
+  return route.name === 'login' || route.name === 'signup'
+})
+
 const isProfilePageShown = computed(() => {
   return route.name === 'profile'
 })
@@ -717,6 +721,16 @@ watch(
   () => [selectedProduct.value?.name, moreProductsSidebarList.value.length],
   () => {
     moreProductsActiveIndex.value = 0
+  }
+)
+
+watch(
+  () => [route.name, isLoggedIn.value],
+  ([routeName, loggedIn]) => {
+    if (routeName === 'checkout' && !loggedIn) {
+      triggerToast('Please sign in or sign up to place an order', 'warning')
+      router.replace({ name: 'signup' })
+    }
   }
 )
 
@@ -797,6 +811,13 @@ const closeWishlist = () => {
 
 const goToCheckout = () => {
   if (!cartItems.value.length) return
+
+  if (!isLoggedIn.value) {
+    triggerToast('Create an account to continue checkout', 'warning')
+    goToSignup()
+    return
+  }
+
   closeCart()
   router.push({ name: 'checkout' })
 }
@@ -1009,6 +1030,12 @@ const clearCart = () => {
 }
 
 const placeOrderFromCheckout = () => {
+  if (!isLoggedIn.value) {
+    triggerToast('Please sign in before placing an order', 'warning')
+    goToSignup()
+    return
+  }
+
   if (!cartItems.value.length) {
     triggerToast('Your cart is empty', 'warning')
     return
@@ -1191,9 +1218,9 @@ const topSellingThumb = 'h-52 w-full object-cover transition duration-300 group-
 </script>
 
 <template>
-  <div :class="isAdminPageShown ? 'relative min-h-screen w-full overflow-hidden bg-slate-100 px-0 py-0' : 'relative mx-auto max-w-[1500px] overflow-hidden px-2 py-4 md:px-3 lg:px-4'">
+  <div :class="isAdminPageShown ? 'relative min-h-screen w-full overflow-hidden bg-slate-100 px-0 py-0' : isAuthPageShown ? 'relative mx-auto min-h-screen max-w-[980px] overflow-hidden px-4 py-8 md:px-6 md:py-10' : 'relative mx-auto min-h-screen max-w-[1500px] overflow-hidden px-2 py-4 md:px-3 lg:px-4'">
 
-    <header v-if="!isAdminPageShown" class="rise-in rise-in-delay-1 sticky top-3 z-20 mt-3 overflow-hidden rounded-2xl border border-slate-200/80 bg-white/95 shadow-[0_14px_30px_rgba(15,23,42,0.1)] backdrop-blur-xl">
+    <header v-if="!isAdminPageShown && !isAuthPageShown" class="rise-in rise-in-delay-1 sticky top-3 z-20 mt-3 overflow-hidden rounded-2xl border border-slate-200/80 bg-white/95 shadow-[0_14px_30px_rgba(15,23,42,0.1)] backdrop-blur-xl">
       <div class="flex flex-wrap items-center justify-between gap-3 border-b border-slate-100 px-4 py-2 text-xs text-slate-600 md:text-sm">
         <p class="inline-flex flex-wrap items-center gap-2">
           <span class="inline-flex items-center gap-1.5">
@@ -1311,7 +1338,7 @@ const topSellingThumb = 'h-52 w-full object-cover transition duration-300 group-
     </header>
 
     <button
-      v-if="!isAdminPageShown && (isCartOpen || isWishlistOpen)"
+      v-if="!isAdminPageShown && !isAuthPageShown && (isCartOpen || isWishlistOpen)"
       type="button"
       class="fixed inset-0 z-30 bg-slate-900/40"
       aria-label="Close panel"
@@ -1319,7 +1346,7 @@ const topSellingThumb = 'h-52 w-full object-cover transition duration-300 group-
     ></button>
 
     <aside
-      v-if="!isAdminPageShown"
+      v-if="!isAdminPageShown && !isAuthPageShown"
       class="fixed right-0 top-0 z-40 flex h-screen w-full max-w-md flex-col border-l border-slate-200 bg-white shadow-2xl transition-transform duration-300"
       :class="isWishlistOpen ? 'translate-x-0' : 'translate-x-full'"
       aria-label="Wishlist"
@@ -1396,7 +1423,7 @@ const topSellingThumb = 'h-52 w-full object-cover transition duration-300 group-
     </aside>
 
     <aside
-      v-if="!isAdminPageShown"
+      v-if="!isAdminPageShown && !isAuthPageShown"
       class="fixed right-0 top-0 z-40 flex h-screen w-full max-w-md flex-col border-l border-slate-200 bg-white shadow-2xl transition-transform duration-300"
       :class="isCartOpen ? 'translate-x-0' : 'translate-x-full'"
       aria-label="Shopping cart"
@@ -2363,7 +2390,7 @@ const topSellingThumb = 'h-52 w-full object-cover transition duration-300 group-
       </section>
     </main>
 
-    <footer v-if="!isAdminPageShown" class="mt-4 overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-md">
+    <footer v-if="!isAdminPageShown && !isAuthPageShown" class="mt-4 overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-md">
       <div class="grid gap-6 p-5 md:grid-cols-2 lg:grid-cols-3">
         <div>
           <h3 class="text-lg font-semibold">BazarPro</h3>
@@ -2403,7 +2430,7 @@ const topSellingThumb = 'h-52 w-full object-cover transition duration-300 group-
     </footer>
 
     <div
-      v-if="!isAdminPageShown"
+      v-if="!isAdminPageShown && !isAuthPageShown"
       class="fixed left-1/2 top-6 z-50 inline-flex min-w-[280px] max-w-[90vw] -translate-x-1/2 items-center gap-2 rounded-xl border px-4 py-3 text-sm font-semibold shadow-2xl ring-2 transition duration-300"
       :class="[toastClass, showCartToast ? 'toast-pop pointer-events-auto opacity-100' : 'pointer-events-none -translate-y-2 opacity-0']"
       role="status"
@@ -2426,7 +2453,7 @@ const topSellingThumb = 'h-52 w-full object-cover transition duration-300 group-
     </div>
 
     <button
-      v-if="!isAdminPageShown"
+      v-if="!isAdminPageShown && !isAuthPageShown"
       type="button"
       class="fixed right-0 top-1/2 z-30 flex w-[84px] -translate-y-1/2 flex-col overflow-hidden rounded-l-2xl border border-r-0 border-brand/35 bg-brand text-white shadow-[-8px_12px_22px_rgba(0,0,0,0.18)] transition duration-300 hover:bg-brand-dark"
       :class="[isCartOpen ? 'pointer-events-none opacity-0' : 'pointer-events-auto opacity-100', cartShake ? 'cart-tab-shake' : '']"
@@ -2458,7 +2485,7 @@ const topSellingThumb = 'h-52 w-full object-cover transition duration-300 group-
     </button>
 
     <button
-      v-if="!isAdminPageShown"
+      v-if="!isAdminPageShown && !isAuthPageShown"
       type="button"
       class="fixed bottom-5 right-5 z-30 flex h-11 w-11 items-center justify-center rounded-full border border-brand/30 bg-white text-brand shadow-lg transition duration-300 hover:-translate-y-0.5 hover:border-brand hover:bg-brand hover:text-white"
       :class="showBackToTop ? 'pointer-events-auto opacity-100' : 'pointer-events-none opacity-0'"

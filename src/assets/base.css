@@ -13,8 +13,19 @@
 }
 
 @layer base {
+  html,
+  body,
+  #app {
+    min-height: 100%;
+  }
+
   body {
     @apply text-ink antialiased;
+    background:
+      radial-gradient(circle at 18% 12%, rgba(56, 189, 248, 0.1), transparent 34%),
+      radial-gradient(circle at 82% 10%, rgba(16, 185, 129, 0.1), transparent 30%),
+      linear-gradient(180deg, #f8fbff 0%, #f3f7fc 45%, #eef4fb 100%);
+    background-attachment: fixed;
   }
 
   h1,
