@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, computed } from 'vue'
+import { ref, computed, watch } from 'vue'
 import { useRouter } from 'vue-router'
 
 type Product = {
@@ -16,6 +16,16 @@ type Product = {
   brand?: string
   flag?: string
 }
+
+type AddToCartPayload = {
+  name: string
+  price: string
+  image: string
+}
+
+const props = defineProps<{
+  onAddToCart?: (item: AddToCartPayload) => void
+}>()
 
 const router = useRouter()
 
@@ -128,17 +138,188 @@ const products: Product[] = [
     brand: 'GhorerBazar',
     description: 'Powerful toilet bowl cleaner.',
   },
+  {
+    name: 'Floor Cleaner Lemon 1L',
+    category: 'Home',
+    price: 'BDT 290',
+    oldPrice: 'BDT 340',
+    image: 'https://picsum.photos/seed/pro-floor-cleaner/360/300',
+    badge: '-15%',
+    brand: 'GhorerBazar',
+    description: 'Fresh lemon floor cleaner for daily hygiene.',
+  },
+  {
+    name: 'Kitchen Tissue Roll Pack',
+    category: 'Home',
+    price: 'BDT 180',
+    oldPrice: 'BDT 220',
+    image: 'https://picsum.photos/seed/pro-tissue/360/300',
+    badge: '-18%',
+    brand: 'Honeyraj',
+    flag: 'Offered Items',
+    description: 'Soft and absorbent kitchen tissue roll pack.',
+  },
+  {
+    name: 'Glass Cleaner 500ml',
+    category: 'Home',
+    price: 'BDT 240',
+    oldPrice: 'BDT 290',
+    image: 'https://picsum.photos/seed/pro-glass-cleaner/360/300',
+    badge: '-17%',
+    brand: 'GhorerBazar',
+    description: 'Streak-free glass cleaner for mirrors and windows.',
+  },
+  {
+    name: 'Hand Wash Refill 1L',
+    category: 'Home',
+    price: 'BDT 320',
+    oldPrice: 'BDT 380',
+    image: 'https://picsum.photos/seed/pro-handwash/360/300',
+    badge: '-16%',
+    brand: 'Honeyraj',
+    flag: 'New Arrival',
+    description: 'Antibacterial hand wash refill for family use.',
+  },
+  {
+    name: 'Air Freshener Citrus',
+    category: 'Home',
+    price: 'BDT 260',
+    oldPrice: 'BDT 310',
+    image: 'https://picsum.photos/seed/pro-air-freshener/360/300',
+    badge: '-16%',
+    brand: 'GhorerBazar',
+    description: 'Long-lasting room freshener with citrus notes.',
+  },
+  {
+    name: 'Natural Neem Honey 500g',
+    category: 'Honey',
+    price: 'BDT 760',
+    oldPrice: 'BDT 890',
+    image: 'https://picsum.photos/seed/pro-neem-honey/360/300',
+    badge: '-15%',
+    brand: 'Honeyraj',
+    flag: 'New Arrival',
+    description: 'Raw neem honey with earthy flavor and wellness benefits.',
+  },
+  {
+    name: 'Wild Forest Honey 750g',
+    category: 'Honey',
+    price: 'BDT 1,250',
+    oldPrice: 'BDT 1,420',
+    image: 'https://picsum.photos/seed/pro-wild-honey/360/300',
+    badge: '-12%',
+    brand: 'GhorerBazar',
+    flag: 'Offered Items',
+    description: 'Wild forest honey with deep aroma and rich taste.',
+  },
+  {
+    name: 'Mustard Flower Honey 500g',
+    category: 'Honey',
+    price: 'BDT 590',
+    oldPrice: 'BDT 690',
+    image: 'https://picsum.photos/seed/pro-mustard-honey/360/300',
+    badge: '-14%',
+    brand: 'Honeyraj',
+    description: 'Monofloral mustard flower honey with smooth sweetness.',
+  },
+  {
+    name: 'Tulsi Honey 350g',
+    category: 'Honey',
+    price: 'BDT 540',
+    oldPrice: 'BDT 620',
+    image: 'https://picsum.photos/seed/pro-tulsi-honey/360/300',
+    badge: '-13%',
+    brand: 'GhorerBazar',
+    description: 'Tulsi infused honey for tea and daily immunity care.',
+  },
+  {
+    name: 'Raw Mountain Honey 1kg',
+    category: 'Honey',
+    price: 'BDT 1,980',
+    oldPrice: 'BDT 2,250',
+    image: 'https://picsum.photos/seed/pro-mountain-honey/360/300',
+    badge: '-12%',
+    brand: 'Honeyraj',
+    flag: 'Offered Items',
+    description: 'Unprocessed mountain honey with natural pollen traces.',
+  },
+  {
+    name: 'Bee Pollen Honey Mix 300g',
+    category: 'Honey',
+    price: 'BDT 640',
+    oldPrice: 'BDT 740',
+    image: 'https://picsum.photos/seed/pro-bee-pollen-honey/360/300',
+    badge: '-14%',
+    brand: 'GhorerBazar',
+    flag: 'New Arrival',
+    description: 'Honey blend enriched with bee pollen.',
+  },
+  {
+    name: 'Bathroom Cleaner 1L',
+    category: 'Home',
+    price: 'BDT 280',
+    oldPrice: 'BDT 330',
+    image: 'https://picsum.photos/seed/pro-bathroom-cleaner/360/300',
+    badge: '-15%',
+    brand: 'Honeyraj',
+    description: 'Removes hard water stains and soap scum quickly.',
+  },
+  {
+    name: 'Fabric Fresh Spray 250ml',
+    category: 'Home',
+    price: 'BDT 190',
+    oldPrice: 'BDT 240',
+    image: 'https://picsum.photos/seed/pro-fabric-spray/360/300',
+    badge: '-21%',
+    brand: 'GhorerBazar',
+    description: 'Refreshes curtains, sofas, and bedsheets instantly.',
+  },
+  {
+    name: 'Dish Scrub Pack 6pcs',
+    category: 'Home',
+    price: 'BDT 130',
+    oldPrice: 'BDT 165',
+    image: 'https://picsum.photos/seed/pro-dish-scrub/360/300',
+    badge: '-21%',
+    brand: 'Honeyraj',
+    flag: 'Offered Items',
+    description: 'Heavy duty scrub pads for kitchen cleaning.',
+  },
+  {
+    name: 'Shoe Deodorizer Spray',
+    category: 'Home',
+    price: 'BDT 340',
+    oldPrice: 'BDT 390',
+    image: 'https://picsum.photos/seed/pro-shoe-deodorizer/360/300',
+    badge: '-13%',
+    brand: 'GhorerBazar',
+    flag: 'New Arrival',
+    description: 'Neutralizes odor and keeps shoes fresh longer.',
+  },
+  {
+    name: 'Microwave Cleaner Gel',
+    category: 'Home',
+    price: 'BDT 270',
+    oldPrice: 'BDT 320',
+    image: 'https://picsum.photos/seed/pro-microwave-cleaner/360/300',
+    badge: '-16%',
+    brand: 'Honeyraj',
+    description: 'Easy-clean gel for ovens and microwaves.',
+  },
 ]
 
 // Filter states
 const selectedCategory = ref<string | null>(null)
 const selectedBrand = ref<string | null>(null)
 const selectedFlag = ref<string | null>(null)
-const minPrice = ref<number>(0)
-const maxPrice = ref<number>(5000)
 const priceRangeMin = ref<number>(0)
 const priceRangeMax = ref<number>(5000)
+const minPriceInput = ref<string>('0')
+const maxPriceInput = ref<string>('5000')
 const showFilters = ref(true)
+const sortBy = ref<'featured' | 'price-asc' | 'price-desc' | 'name-asc' | 'name-desc'>('featured')
+const itemsPerPage = ref<number>(16)
+const currentPage = ref<number>(1)
 
 // Extract unique values
 const categories = computed(() => {
@@ -159,7 +340,29 @@ const parsePrice = (priceText: string): number => {
   return Number.isFinite(numericValue) ? numericValue : 0
 }
 
-// Filter products
+const clampPrice = (value: number): number => {
+  if (!Number.isFinite(value) || value < 0) return 0
+  return Math.round(value)
+}
+
+const applyPriceRange = () => {
+  const parsedMin = clampPrice(Number(minPriceInput.value))
+  const parsedMax = clampPrice(Number(maxPriceInput.value))
+
+  if (parsedMin <= parsedMax) {
+    priceRangeMin.value = parsedMin
+    priceRangeMax.value = parsedMax
+    minPriceInput.value = String(parsedMin)
+    maxPriceInput.value = String(parsedMax)
+    return
+  }
+
+  priceRangeMin.value = parsedMax
+  priceRangeMax.value = parsedMin
+  minPriceInput.value = String(parsedMax)
+  maxPriceInput.value = String(parsedMin)
+}
+
 const filteredProducts = computed(() => {
   return products.filter((product) => {
     // Category filter
@@ -179,12 +382,68 @@ const filteredProducts = computed(() => {
   })
 })
 
+const sortedProducts = computed(() => {
+  const result = [...filteredProducts.value]
+
+  if (sortBy.value === 'price-asc') {
+    result.sort((a, b) => parsePrice(a.price) - parsePrice(b.price))
+  } else if (sortBy.value === 'price-desc') {
+    result.sort((a, b) => parsePrice(b.price) - parsePrice(a.price))
+  } else if (sortBy.value === 'name-asc') {
+    result.sort((a, b) => a.name.localeCompare(b.name))
+  } else if (sortBy.value === 'name-desc') {
+    result.sort((a, b) => b.name.localeCompare(a.name))
+  }
+
+  return result
+})
+
+const totalPages = computed(() => {
+  const total = Math.ceil(sortedProducts.value.length / itemsPerPage.value)
+  return total > 0 ? total : 1
+})
+
+const paginatedProducts = computed(() => {
+  const start = (currentPage.value - 1) * itemsPerPage.value
+  const end = start + itemsPerPage.value
+  return sortedProducts.value.slice(start, end)
+})
+
+const startItem = computed(() => {
+  if (sortedProducts.value.length === 0) return 0
+  return (currentPage.value - 1) * itemsPerPage.value + 1
+})
+
+const endItem = computed(() => {
+  return Math.min(currentPage.value * itemsPerPage.value, sortedProducts.value.length)
+})
+
+watch([selectedCategory, selectedBrand, selectedFlag, priceRangeMin, priceRangeMax, sortBy, itemsPerPage], () => {
+  currentPage.value = 1
+})
+
+watch([sortedProducts, itemsPerPage], () => {
+  if (currentPage.value > totalPages.value) {
+    currentPage.value = totalPages.value
+  }
+})
+
 const resetFilters = () => {
   selectedCategory.value = null
   selectedBrand.value = null
   selectedFlag.value = null
   priceRangeMin.value = 0
   priceRangeMax.value = 5000
+  minPriceInput.value = '0'
+  maxPriceInput.value = '5000'
+  sortBy.value = 'featured'
+  itemsPerPage.value = 16
+  currentPage.value = 1
+}
+
+const goToPage = (page: number) => {
+  if (page < 1 || page > totalPages.value) return
+  currentPage.value = page
 }
 
 const openProductDetail = (product: Product) => {
@@ -192,7 +451,30 @@ const openProductDetail = (product: Product) => {
     .toLowerCase()
     .replace(/\s+/g, '-')
     .replace(/[^\w-]/g, '')
+
+  const productPreview = {
+    name: product.name,
+    price: product.price,
+    image: product.image,
+    oldPrice: product.oldPrice,
+    category: product.category,
+    badge: product.badge,
+    images: product.images,
+    description: product.description,
+    keyFeatures: product.keyFeatures,
+    usageIdeas: product.usageIdeas,
+  }
+
+  sessionStorage.setItem(`product-preview:${productSlug}`, JSON.stringify(productPreview))
   router.push({ name: 'product-detail', params: { productName: productSlug } })
+}
+
+const addToCartFromList = (product: Product) => {
+  props.onAddToCart?.({
+    name: product.name,
+    price: product.price,
+    image: product.image,
+  })
 }
 </script>
 
@@ -282,18 +564,25 @@ const openProductDetail = (product: Product) => {
               <div class="space-y-3">
                 <div class="flex gap-2">
                   <input
-                    v-model.number="priceRangeMin"
+                    v-model="minPriceInput"
                     type="number"
                     placeholder="Min"
                     class="flex-1 rounded-lg border border-slate-200 px-2 py-1.5 text-sm focus:border-brand focus:outline-none"
                   />
                   <span class="flex items-center text-slate-500">-</span>
                   <input
-                    v-model.number="priceRangeMax"
+                    v-model="maxPriceInput"
                     type="number"
                     placeholder="Max"
                     class="flex-1 rounded-lg border border-slate-200 px-2 py-1.5 text-sm focus:border-brand focus:outline-none"
                   />
+                  <button
+                    type="button"
+                    class="rounded-lg bg-brand px-3 py-1.5 text-xs font-semibold text-white hover:bg-brand-dark"
+                    @click="applyPriceRange"
+                  >
+                    Go
+                  </button>
                 </div>
                 <p class="text-xs text-slate-500">
                   BDT {{ priceRangeMin.toLocaleString() }} - BDT {{ priceRangeMax.toLocaleString() }}
@@ -362,17 +651,47 @@ const openProductDetail = (product: Product) => {
 
       <!-- Products Grid -->
       <main>
-        <!-- Results Count -->
-        <div class="mb-4 flex items-center justify-between">
-          <p class="text-sm font-medium text-slate-600">
-            Showing <span class="font-semibold text-slate-900">{{ filteredProducts.length }}</span>
-            products
-          </p>
+        <!-- Top Controls -->
+        <div class="mb-4 flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+          <div class="flex items-center gap-2">
+            <label for="sort-by" class="text-sm font-semibold text-slate-700">Sort By</label>
+            <select
+              id="sort-by"
+              v-model="sortBy"
+              class="rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-700 focus:border-brand focus:outline-none"
+            >
+              <option value="featured">Featured</option>
+              <option value="price-asc">Price: Low to High</option>
+              <option value="price-desc">Price: High to Low</option>
+              <option value="name-asc">Name: A to Z</option>
+              <option value="name-desc">Name: Z to A</option>
+            </select>
+          </div>
+
+          <div class="flex flex-wrap items-center gap-3 md:justify-end">
+            <p class="text-sm font-medium text-slate-600">
+              Showing <span class="font-semibold text-slate-900">{{ startItem }}</span>
+              - <span class="font-semibold text-slate-900">{{ endItem }}</span>
+              of <span class="font-semibold text-slate-900">{{ sortedProducts.length }}</span>
+            </p>
+            <div class="flex items-center gap-2">
+              <label for="items-per-page" class="text-sm font-semibold text-slate-700">Show</label>
+              <select
+                id="items-per-page"
+                v-model.number="itemsPerPage"
+                class="rounded-lg border border-slate-200 bg-white px-2.5 py-2 text-sm text-slate-700 focus:border-brand focus:outline-none"
+              >
+                <option :value="16">16</option>
+                <option :value="24">24</option>
+                <option :value="32">32</option>
+              </select>
+            </div>
+          </div>
         </div>
 
         <!-- No Results Message -->
         <div
-          v-if="filteredProducts.length === 0"
+          v-if="sortedProducts.length === 0"
           class="rounded-2xl border border-dashed border-slate-300 bg-slate-50 p-8 text-center"
         >
           <svg
@@ -401,7 +720,7 @@ const openProductDetail = (product: Product) => {
         <!-- Products Grid -->
         <div v-else class="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
           <article
-            v-for="product in filteredProducts"
+            v-for="product in paginatedProducts"
             :key="product.name"
             class="group overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm transition duration-300 hover:-translate-y-1 hover:border-slate-300 hover:shadow-lg cursor-pointer"
             @click="openProductDetail(product)"
@@ -446,13 +765,48 @@ const openProductDetail = (product: Product) => {
 
               <!-- Add to Cart Button -->
               <button
-                @click.stop
+                @click.stop="addToCartFromList(product)"
                 class="mt-3 w-full rounded-lg border border-slate-200 px-3 py-2 text-sm font-semibold text-slate-700 transition hover:border-brand hover:text-brand"
               >
                 Add to Cart
               </button>
             </div>
           </article>
+        </div>
+
+        <div v-if="sortedProducts.length > itemsPerPage" class="mt-6 flex flex-wrap items-center justify-center gap-2">
+          <button
+            type="button"
+            class="rounded-lg border border-slate-200 px-3 py-2 text-sm font-semibold text-slate-700 transition hover:border-brand hover:text-brand disabled:cursor-not-allowed disabled:opacity-50"
+            :disabled="currentPage === 1"
+            @click="goToPage(currentPage - 1)"
+          >
+            Prev
+          </button>
+
+          <button
+            v-for="page in totalPages"
+            :key="`page-${page}`"
+            type="button"
+            class="rounded-lg border px-3 py-2 text-sm font-semibold transition"
+            :class="
+              currentPage === page
+                ? 'border-brand bg-brand text-white'
+                : 'border-slate-200 bg-white text-slate-700 hover:border-brand hover:text-brand'
+            "
+            @click="goToPage(page)"
+          >
+            {{ page }}
+          </button>
+
+          <button
+            type="button"
+            class="rounded-lg border border-slate-200 px-3 py-2 text-sm font-semibold text-slate-700 transition hover:border-brand hover:text-brand disabled:cursor-not-allowed disabled:opacity-50"
+            :disabled="currentPage === totalPages"
+            @click="goToPage(currentPage + 1)"
+          >
+            Next
+          </button>
         </div>
       </main>
     </div>

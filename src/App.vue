@@ -70,10 +70,6 @@ const slugifyProductName = (name: string): string => {
     .replace(/[^\w-]/g, '')
 }
 
-const unslugifyProductName = (slug: string): string => {
-  return slug.replace(/-/g, ' ')
-}
-
 const carouselPosters = [
   {
     title: 'Fresh groceries delivered fast across Bangladesh',
@@ -553,16 +549,27 @@ const isProductsListPageShown = computed(() => {
   return route.name === 'products-list'
 })
 
-const routeProductName = computed(() => {
+const routeProductSlug = computed(() => {
   const param = route.params.productName
-  return typeof param === 'string' ? unslugifyProductName(param) : null
+  return typeof param === 'string' ? param : null
 })
 
 const currentProductFromRoute = computed(() => {
-  if (!routeProductName.value) return null
-  const routeName = routeProductName.value
-  const product = allProducts.value.find((p) => p.name.toLowerCase() === routeName.toLowerCase())
-  if (!product) return null
+  if (!routeProductSlug.value) return null
+
+  const product = allProducts.value.find((p) => slugifyProductName(p.name) === routeProductSlug.value)
+
+  if (!product) {
+    const storedProductRaw = sessionStorage.getItem(`product-preview:${routeProductSlug.value}`)
+    if (!storedProductRaw) return null
+
+    try {
+      return JSON.parse(storedProductRaw) as ProductPreview
+    } catch {
+      return null
+    }
+  }
+
   return {
     name: product.name,
     price: product.price,
@@ -617,6 +624,10 @@ const openProductDetail = (item: ProductPreview) => {
   isImageZoomed.value = false
   const productSlug = slugifyProductName(item.name)
   router.push({ name: 'product-detail', params: { productName: productSlug } })
+}
+
+const addProductListItemToCart = (item: CartProduct) => {
+  addToCart(item)
 }
 
 const closeProductDetail = () => {
@@ -1267,7 +1278,7 @@ const topSellingThumb = 'h-52 w-full object-cover transition duration-300 group-
     </aside>
 
     <main v-if="isProductsListPageShown" class="mt-6">
-      <ProductListPage />
+      <ProductListPage :on-add-to-cart="addProductListItemToCart" />
     </main>
 
     <main v-else-if="isProductDetailOpen && selectedProduct" class="mt-6 space-y-6 md:space-y-7">
