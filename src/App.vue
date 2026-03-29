@@ -24,6 +24,13 @@ type CartItem = {
   qty: number
 }
 
+type WishlistItem = {
+  id: string
+  name: string
+  price: string
+  image: string
+}
+
 const carouselPosters = [
   {
     title: 'Fresh groceries delivered fast across Bangladesh',
@@ -39,17 +46,18 @@ const carouselPosters = [
   },
 ]
 
-const staticPoster = {
-  title: 'Weekend Mega Offer',
-  subtitle: 'Get exclusive discounts on top category products.',
-  image: 'https://picsum.photos/seed/pro-static-poster/760/920',
-}
-
 const defaultPoster = {
   title: 'Fresh Grocery Deals',
   subtitle: 'Best picks for your home essentials.',
   cta: 'Shop Now',
   image: 'https://picsum.photos/seed/pro-ecom-hero-fallback/1240/560',
+}
+
+const sideHeroBanner = {
+  title: '30% OFF Fresh Essentials',
+  subtitle: 'Limited-time discount on pantry staples and daily needs.',
+  cta: 'Grab Offer',
+  image: 'https://picsum.photos/seed/pro-static-poster/760/920',
 }
 
 const activePoster = ref(0)
@@ -376,13 +384,6 @@ const services = [
   { icon: 'return', title: 'Easy Return', subtitle: 'Simple return support on issues' },
 ]
 
-const quickStats = [
-  { title: '10K+', subtitle: 'Orders Delivered Weekly' },
-  { title: '4.9/5', subtitle: 'Average Customer Rating' },
-  { title: '64', subtitle: 'District Coverage' },
-  { title: '1200+', subtitle: 'Daily Fresh Items' },
-]
-
 const collectionTabs = ['All', 'Groceries', 'Beverages', 'Personal Care', 'Home Care'] as const
 type CollectionTab = (typeof collectionTabs)[number]
 const activeCollection = ref<CollectionTab>('All')
@@ -414,12 +415,15 @@ const buildCartId = (name: string): string => {
 }
 
 const isCartOpen = ref(false)
+const isWishlistOpen = ref(false)
 const cartItems = ref<CartItem[]>([])
 const cartToastMessage = ref('')
 const showCartToast = ref(false)
+type ToastTone = 'success' | 'warning' | 'info'
+const toastTone = ref<ToastTone>('success')
 const cartShake = ref(false)
 const wishlistLimit = 50
-const wishlistIds = ref<string[]>([])
+const wishlistItems = ref<WishlistItem[]>([])
 
 const cartCount = computed(() => {
   return cartItems.value.reduce((total, item) => total + item.qty, 0)
@@ -430,10 +434,21 @@ const cartSubtotal = computed(() => {
 })
 
 const wishlistCount = computed(() => {
-  return wishlistIds.value.length
+  return wishlistItems.value.length
+})
+
+const toastClass = computed(() => {
+  if (toastTone.value === 'warning') {
+    return 'border-amber-300 bg-amber-500 text-white ring-amber-300/40'
+  }
+  if (toastTone.value === 'info') {
+    return 'border-sky-300 bg-sky-500 text-white ring-sky-300/40'
+  }
+  return 'border-emerald-300 bg-emerald-600 text-white ring-emerald-300/40'
 })
 
 const openCart = () => {
+  isWishlistOpen.value = false
   isCartOpen.value = true
 }
 
@@ -441,8 +456,18 @@ const closeCart = () => {
   isCartOpen.value = false
 }
 
-const triggerToast = (message: string) => {
+const openWishlist = () => {
+  isCartOpen.value = false
+  isWishlistOpen.value = true
+}
+
+const closeWishlist = () => {
+  isWishlistOpen.value = false
+}
+
+const triggerToast = (message: string, tone: ToastTone = 'success') => {
   cartToastMessage.value = message
+  toastTone.value = tone
   showCartToast.value = true
 
   if (cartToastTimer) {
@@ -455,7 +480,7 @@ const triggerToast = (message: string) => {
 }
 
 const triggerCartToast = (productName: string) => {
-  triggerToast(`${productName} added to cart`)
+  triggerToast(`${productName} added to cart`, 'success')
   cartShake.value = true
 
   if (cartShakeTimer) {
@@ -468,26 +493,36 @@ const triggerCartToast = (productName: string) => {
 }
 
 const isWishlisted = (name: string) => {
-  return wishlistIds.value.includes(buildCartId(name))
+  const id = buildCartId(name)
+  return wishlistItems.value.some((wishlistItem) => wishlistItem.id === id)
 }
 
 const toggleWishlist = (item: CartProduct) => {
   const id = buildCartId(item.name)
-  const exists = wishlistIds.value.includes(id)
+  const exists = wishlistItems.value.some((wishlistItem) => wishlistItem.id === id)
 
   if (exists) {
-    wishlistIds.value = wishlistIds.value.filter((wishlistId) => wishlistId !== id)
-    triggerToast(`${item.name} removed from wishlist`)
+    wishlistItems.value = wishlistItems.value.filter((wishlistItem) => wishlistItem.id !== id)
+    triggerToast(`${item.name} removed from wishlist`, 'info')
     return
   }
 
-  if (wishlistIds.value.length >= wishlistLimit) {
-    triggerToast(`Wishlist limit is ${wishlistLimit} items`)
+  if (wishlistItems.value.length >= wishlistLimit) {
+    triggerToast(`Wishlist limit is ${wishlistLimit} items`, 'warning')
     return
   }
 
-  wishlistIds.value.unshift(id)
-  triggerToast(`${item.name} added to wishlist`)
+  wishlistItems.value.unshift({
+    id,
+    name: item.name,
+    price: item.price,
+    image: item.image,
+  })
+  triggerToast(`${item.name} added to wishlist`, 'success')
+}
+
+const removeWishlistItem = (id: string) => {
+  wishlistItems.value = wishlistItems.value.filter((wishlistItem) => wishlistItem.id !== id)
 }
 
 const addToCart = (item: CartProduct) => {
@@ -709,10 +744,6 @@ const topSellingThumb = 'h-52 w-full object-cover transition duration-300 group-
 <template>
   <div class="relative mx-auto max-w-[1500px] overflow-hidden px-2 py-4 md:px-3 lg:px-4">
 
-    <div class="rise-in rounded-xl border border-brand/20 px-4 py-2 text-center text-[13px] font-medium text-brand shadow-sm md:text-sm">
-      Pro Store Template: consistent product cards, compact categories, and scalable layout for any ecommerce niche.
-    </div>
-
     <header class="rise-in rise-in-delay-1 sticky top-3 z-20 mt-3 overflow-hidden rounded-2xl border border-slate-200/80 bg-white/95 shadow-[0_14px_30px_rgba(15,23,42,0.1)] backdrop-blur-xl">
       <div class="flex flex-wrap items-center justify-between gap-3 border-b border-slate-100 px-4 py-2 text-xs text-slate-600 md:text-sm">
         <p class="inline-flex flex-wrap items-center gap-2">
@@ -775,7 +806,7 @@ const topSellingThumb = 'h-52 w-full object-cover transition duration-300 group-
         </div>
 
         <div class="ml-auto flex items-center gap-2 md:ml-0">
-          <button class="inline-flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-2 text-sm font-medium text-slate-700 hover:border-brand hover:text-brand" type="button">
+          <button class="inline-flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-2 text-sm font-medium text-slate-700 hover:border-brand hover:text-brand" type="button" @click="openWishlist">
             <svg class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
               <path d="M20.8 4.6a5.5 5.5 0 0 0-7.8 0L12 5.6l-1-1a5.5 5.5 0 0 0-7.8 7.8l1 1L12 21l7.8-7.6 1-1a5.5 5.5 0 0 0 0-7.8z" />
             </svg>
@@ -806,12 +837,88 @@ const topSellingThumb = 'h-52 w-full object-cover transition duration-300 group-
     </header>
 
     <button
-      v-if="isCartOpen"
+      v-if="isCartOpen || isWishlistOpen"
       type="button"
       class="fixed inset-0 z-30 bg-slate-900/40"
-      aria-label="Close cart"
-      @click="closeCart"
+      aria-label="Close panel"
+      @click="closeCart(); closeWishlist()"
     ></button>
+
+    <aside
+      class="fixed right-0 top-0 z-40 flex h-screen w-full max-w-md flex-col border-l border-slate-200 bg-white shadow-2xl transition-transform duration-300"
+      :class="isWishlistOpen ? 'translate-x-0' : 'translate-x-full'"
+      aria-label="Wishlist"
+    >
+      <div class="flex items-center justify-between border-b border-slate-100 px-5 py-4">
+        <div>
+          <p class="text-xs font-semibold uppercase tracking-wide text-slate-500">Wishlist</p>
+          <h3 class="text-lg font-semibold text-ink">Saved Items ({{ wishlistCount }}/{{ wishlistLimit }})</h3>
+        </div>
+        <button
+          type="button"
+          class="rounded-lg border border-slate-200 px-3 py-2 text-sm font-semibold text-slate-700 hover:border-brand hover:text-brand"
+          @click="closeWishlist"
+        >
+          Close
+        </button>
+      </div>
+
+      <div class="flex-1 overflow-y-auto px-5 py-4">
+        <div v-if="!wishlistItems.length" class="rounded-xl border border-dashed border-slate-300 bg-slate-50 p-5 text-center">
+          <p class="text-sm font-medium text-slate-600">Your wishlist is empty.</p>
+          <p class="mt-1 text-xs text-slate-500">Tap the heart icon on any product to save it.</p>
+        </div>
+
+        <div v-else class="space-y-3">
+          <article
+            v-for="wishlistItem in wishlistItems"
+            :key="wishlistItem.id"
+            class="rounded-xl border border-slate-200 p-3"
+          >
+            <div class="flex gap-3">
+              <img :src="wishlistItem.image" :alt="wishlistItem.name" class="h-14 w-14 rounded-lg object-cover" loading="lazy" />
+              <div class="min-w-0 flex-1">
+                <p class="line-clamp-2 text-sm font-semibold text-ink">{{ wishlistItem.name }}</p>
+                <p class="mt-1 text-sm font-semibold text-brand">{{ wishlistItem.price }}</p>
+              </div>
+              <button
+                type="button"
+                class="inline-flex h-8 w-8 items-center justify-center rounded-full border border-rose-200 text-rose-600 transition hover:bg-rose-50 hover:text-rose-700"
+                aria-label="Remove from wishlist"
+                @click="removeWishlistItem(wishlistItem.id)"
+              >
+                <svg class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                  <path d="M18 6 6 18" />
+                  <path d="m6 6 12 12" />
+                </svg>
+              </button>
+            </div>
+
+            <div class="mt-3 grid grid-cols-2 gap-2">
+              <button
+                type="button"
+                class="inline-flex items-center justify-center gap-1.5 rounded-lg border border-slate-200 px-2.5 py-2 text-xs font-semibold text-slate-700 transition hover:border-brand hover:text-brand"
+                @click="addToCart(wishlistItem)"
+              >
+                <svg class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                  <circle cx="9" cy="20" r="1" />
+                  <circle cx="17" cy="20" r="1" />
+                  <path d="M5 5h2l2 10h9l2-7H8" />
+                </svg>
+                <span>Add to cart</span>
+              </button>
+              <button
+                type="button"
+                class="rounded-lg bg-brand px-2.5 py-2 text-xs font-semibold text-white hover:bg-brand-dark"
+                @click="buyNow(wishlistItem)"
+              >
+                Buy now
+              </button>
+            </div>
+          </article>
+        </div>
+      </div>
+    </aside>
 
     <aside
       class="fixed right-0 top-0 z-40 flex h-screen w-full max-w-md flex-col border-l border-slate-200 bg-white shadow-2xl transition-transform duration-300"
@@ -968,25 +1075,18 @@ const topSellingThumb = 'h-52 w-full object-cover transition duration-300 group-
         </article>
 
         <aside class="relative overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-lg">
-          <img :src="staticPoster.image" :alt="staticPoster.title" class="h-[320px] w-full object-cover md:h-[390px]" loading="lazy" />
-          <div class="absolute inset-0 bg-gradient-to-t from-black/70 via-black/20 to-transparent"></div>
+          <img :src="sideHeroBanner.image" :alt="sideHeroBanner.title" class="h-[320px] w-full object-cover md:h-[390px]" loading="lazy" />
+          <div class="absolute inset-0 bg-gradient-to-t from-black/75 via-black/25 to-transparent"></div>
           <div class="absolute inset-x-0 bottom-0 p-5 text-white">
-            <p class="inline-flex rounded-full bg-white/90 px-2.5 py-1 text-[11px] font-semibold uppercase tracking-wide text-brand">Static Poster</p>
-            <h3 class="mt-2 text-xl font-semibold">{{ staticPoster.title }}</h3>
-            <p class="text-sm text-emerald-100">{{ staticPoster.subtitle }}</p>
+            <p class="inline-flex rounded-full bg-white/90 px-2.5 py-1 text-[11px] font-semibold uppercase tracking-wide text-brand">Special Offer</p>
+            <h3 class="mt-2 text-xl font-semibold">{{ sideHeroBanner.title }}</h3>
+            <p class="mt-1 text-sm text-emerald-100">{{ sideHeroBanner.subtitle }}</p>
+            <button class="mt-4 rounded-lg bg-white px-3 py-2 text-xs font-semibold text-slate-800 hover:bg-slate-100" type="button">
+              {{ sideHeroBanner.cta }}
+            </button>
           </div>
         </aside>
-      </section>
 
-      <section class="rise-in grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-        <article
-          v-for="stat in quickStats"
-          :key="stat.title"
-          class="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm transition hover:-translate-y-0.5 hover:shadow-md"
-        >
-          <p class="text-2xl font-semibold text-ink">{{ stat.title }}</p>
-          <p class="text-xs font-medium uppercase tracking-wide text-slate-500">{{ stat.subtitle }}</p>
-        </article>
       </section>
 
       <section class="surface-card rise-in rise-in-delay-1 p-4 md:p-5">
@@ -1399,7 +1499,7 @@ const topSellingThumb = 'h-52 w-full object-cover transition duration-300 group-
     </main>
 
     <footer class="mt-4 overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-md">
-      <div class="grid gap-6 p-5 md:grid-cols-2 lg:grid-cols-4">
+      <div class="grid gap-6 p-5 md:grid-cols-2 lg:grid-cols-3">
         <div>
           <h3 class="text-lg font-semibold">BazarPro</h3>
           <p class="mt-2 text-sm text-slate-600">
@@ -1422,13 +1522,6 @@ const topSellingThumb = 'h-52 w-full object-cover transition duration-300 group-
             <li><a class="hover:text-brand" href="#">Returns</a></li>
           </ul>
         </div>
-        <div>
-          <h4 class="text-sm font-semibold uppercase tracking-wide text-slate-500">Newsletter</h4>
-          <form class="mt-2 flex items-center overflow-hidden rounded-lg border border-slate-200" @submit.prevent>
-            <input class="h-10 w-full px-3 text-sm outline-none" type="email" placeholder="Enter your email" aria-label="Email" />
-            <button class="h-10 bg-brand px-3 text-sm font-semibold text-white hover:bg-brand-dark" type="submit">Join</button>
-          </form>
-        </div>
       </div>
       <div class="flex flex-wrap items-center justify-between gap-3 border-t border-slate-100 px-5 py-3 text-xs text-slate-500 md:text-sm">
         <p>Copyright © 2026 BazarPro</p>
@@ -1445,13 +1538,23 @@ const topSellingThumb = 'h-52 w-full object-cover transition duration-300 group-
     </footer>
 
     <div
-      class="fixed bottom-5 left-5 z-40 inline-flex items-center gap-2 rounded-xl border border-emerald-200 bg-gradient-to-r from-emerald-50 via-white to-emerald-50 px-4 py-2.5 text-sm font-semibold text-emerald-800 shadow-[0_12px_30px_rgba(16,185,129,0.28)] ring-1 ring-emerald-200/50 transition duration-300"
-      :class="showCartToast ? 'translate-y-0 opacity-100' : 'pointer-events-none translate-y-3 opacity-0'"
+      class="fixed left-1/2 top-6 z-50 inline-flex min-w-[280px] max-w-[90vw] -translate-x-1/2 items-center gap-2 rounded-xl border px-4 py-3 text-sm font-semibold shadow-2xl ring-2 transition duration-300"
+      :class="[toastClass, showCartToast ? 'toast-pop pointer-events-auto opacity-100' : 'pointer-events-none -translate-y-2 opacity-0']"
       role="status"
       aria-live="polite"
     >
-      <svg class="h-4 w-4 text-emerald-600" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+      <svg v-if="toastTone === 'success'" class="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
         <path d="m20 6-11 11-5-5" />
+      </svg>
+      <svg v-else-if="toastTone === 'warning'" class="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+        <path d="M12 9v4" />
+        <path d="M12 17h.01" />
+        <path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z" />
+      </svg>
+      <svg v-else class="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+        <circle cx="12" cy="12" r="10" />
+        <path d="M12 8v4" />
+        <path d="M12 16h.01" />
       </svg>
       {{ cartToastMessage }}
     </div>
@@ -1515,6 +1618,10 @@ const topSellingThumb = 'h-52 w-full object-cover transition duration-300 group-
   animation: cartTabShake 0.52s ease;
 }
 
+.toast-pop {
+  animation: toastPop 0.26s ease;
+}
+
 @keyframes cartTabShake {
   0% {
     transform: translateY(-50%) translateX(0);
@@ -1534,6 +1641,16 @@ const topSellingThumb = 'h-52 w-full object-cover transition duration-300 group-
 
   100% {
     transform: translateY(-50%) translateX(0);
+  }
+}
+
+@keyframes toastPop {
+  from {
+    transform: translateX(-50%) translateY(-8px) scale(0.96);
+  }
+
+  to {
+    transform: translateX(-50%) translateY(0) scale(1);
   }
 }
 </style>
