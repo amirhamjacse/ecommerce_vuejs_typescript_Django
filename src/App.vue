@@ -76,6 +76,28 @@ type UserSession = {
 
 const route = useRoute()
 const router = useRouter()
+const fallbackProductImage = '/images/product-fallback.svg'
+
+const handleGlobalImageError = (event: Event) => {
+  const target = event.target
+  if (!(target instanceof HTMLImageElement)) return
+
+  // Try a stable backup thumbnail first when external product URLs fail.
+  if (target.dataset.backupTried !== 'true') {
+    target.dataset.backupTried = 'true'
+    const seed = encodeURIComponent(target.alt || 'product')
+    const width = Math.max(120, Math.round(target.clientWidth || 360))
+    const height = Math.max(120, Math.round(target.clientHeight || 300))
+    target.src = `https://picsum.photos/seed/${seed}/${width}/${height}`
+    return
+  }
+
+  // Prevent infinite retry loops if fallback image also fails.
+  if (target.dataset.fallbackApplied === 'true') return
+
+  target.dataset.fallbackApplied = 'true'
+  target.src = fallbackProductImage
+}
 
 const slugifyProductName = (name: string): string => {
   return name
@@ -89,13 +111,13 @@ const carouselPosters = [
     title: 'Fresh groceries delivered fast across Bangladesh',
     subtitle: 'Clean product browsing and quick checkout for daily needs.',
     cta: 'Shop Now',
-    image: 'https://picsum.photos/seed/pro-ecom-hero-1/1240/560',
+    image: 'https://images.pexels.com/photos/3962286/pexels-photo-3962286.jpeg?w=1240&h=560&fit=crop',
   },
   {
     title: 'Daily essentials with smart prices and reliable delivery',
     subtitle: 'Trusted collections for grocery, organic items, and household products.',
     cta: 'View Deals',
-    image: 'https://picsum.photos/seed/pro-ecom-hero-2/1240/560',
+    image: 'https://images.pexels.com/photos/3962287/pexels-photo-3962287.jpeg?w=1240&h=560&fit=crop',
   },
 ]
 
@@ -103,14 +125,14 @@ const defaultPoster = {
   title: 'Fresh Grocery Deals',
   subtitle: 'Best picks for your home essentials.',
   cta: 'Shop Now',
-  image: 'https://picsum.photos/seed/pro-ecom-hero-fallback/1240/560',
+  image: 'https://images.pexels.com/photos/3962286/pexels-photo-3962286.jpeg?w=1240&h=560&fit=crop',
 }
 
 const sideHeroBanner = {
   title: '30% OFF Fresh Essentials',
   subtitle: 'Limited-time discount on pantry staples and daily needs.',
   cta: 'Grab Offer',
-  image: 'https://picsum.photos/seed/pro-static-poster/760/920',
+  image: 'https://images.pexels.com/photos/3962288/pexels-photo-3962288.jpeg?w=760&h=920&fit=crop',
 }
 
 const activePoster = ref(0)
@@ -176,6 +198,7 @@ onMounted(() => {
   startAutoFlashSale()
   startAutoTopSelling()
   document.addEventListener('visibilitychange', handleVisibilityChange)
+  window.addEventListener('error', handleGlobalImageError, true)
   window.addEventListener('scroll', handlePageScroll, { passive: true })
   handlePageScroll()
 
@@ -205,21 +228,22 @@ onUnmounted(() => {
     cartShakeTimer = undefined
   }
   document.removeEventListener('visibilitychange', handleVisibilityChange)
+  window.removeEventListener('error', handleGlobalImageError, true)
   window.removeEventListener('scroll', handlePageScroll)
 })
 
 const featuredQuickCategories = [
-  { name: 'See all', image: 'https://picsum.photos/seed/featured-see-all/120/120' },
-  { name: 'Oil and Ghee', image: 'https://picsum.photos/seed/featured-oil-ghee/120/120' },
-  { name: 'Organic', image: 'https://picsum.photos/seed/featured-organic/120/120' },
-  { name: 'Honey', image: 'https://picsum.photos/seed/featured-honey/120/120' },
-  { name: 'Dates', image: 'https://picsum.photos/seed/featured-dates/120/120' },
-  { name: 'Spices', image: 'https://picsum.photos/seed/featured-spices/120/120' },
-  { name: 'Nuts and Seeds', image: 'https://picsum.photos/seed/featured-nuts-seeds/120/120' },
-  { name: 'Beverage', image: 'https://picsum.photos/seed/featured-beverage/120/120' },
-  { name: 'Rice', image: 'https://picsum.photos/seed/featured-rice/120/120' },
-  { name: 'Flours and Lentils', image: 'https://picsum.photos/seed/featured-flours-lentils/120/120' },
-  { name: 'Functional Food', image: 'https://picsum.photos/seed/featured-functional-food/120/120' },
+  { name: 'See all', image: 'https://images.pexels.com/photos/3962286/pexels-photo-3962286.jpeg?w=120&h=120&fit=crop' },
+  { name: 'Oil and Ghee', image: 'https://images.pexels.com/photos/3814619/pexels-photo-3814619.jpeg?w=120&h=120&fit=crop' },
+  { name: 'Organic', image: 'https://images.pexels.com/photos/5632399/pexels-photo-5632399.jpeg?w=120&h=120&fit=crop' },
+  { name: 'Honey', image: 'https://images.pexels.com/photos/312418/pexels-photo-312418.jpeg?w=120&h=120&fit=crop' },
+  { name: 'Dates', image: 'https://images.pexels.com/photos/1092730/pexels-photo-1092730.jpeg?w=120&h=120&fit=crop' },
+  { name: 'Spices', image: 'https://images.pexels.com/photos/4551832/pexels-photo-4551832.jpeg?w=120&h=120&fit=crop' },
+  { name: 'Nuts and Seeds', image: 'https://images.pexels.com/photos/5632399/pexels-photo-5632399.jpeg?w=120&h=120&fit=crop' },
+  { name: 'Beverage', image: 'https://images.pexels.com/photos/3407857/pexels-photo-3407857.jpeg?w=120&h=120&fit=crop' },
+  { name: 'Rice', image: 'https://images.pexels.com/photos/2632504/pexels-photo-2632504.jpeg?w=120&h=120&fit=crop' },
+  { name: 'Flours and Lentils', image: 'https://images.pexels.com/photos/4551832/pexels-photo-4551832.jpeg?w=120&h=120&fit=crop' },
+  { name: 'Functional Food', image: 'https://images.pexels.com/photos/5632399/pexels-photo-5632399.jpeg?w=120&h=120&fit=crop' },
 ]
 
 const flashSaleItems: Product[] = [
@@ -228,7 +252,7 @@ const flashSaleItems: Product[] = [
     category: 'Vegetables',
     price: 'BDT 118',
     oldPrice: 'BDT 145',
-    image: 'https://picsum.photos/seed/pro-onion/360/300',
+    image: 'https://images.pexels.com/photos/1092730/pexels-photo-1092730.jpeg?w=360&h=300&fit=crop',
     badge: '-19%',
   },
   {
@@ -236,7 +260,7 @@ const flashSaleItems: Product[] = [
     category: 'Fish and Meat',
     price: 'BDT 1,390',
     oldPrice: 'BDT 1,620',
-    image: 'https://picsum.photos/seed/pro-fish/360/300',
+    image: 'https://images.pexels.com/photos/4551832/pexels-photo-4551832.jpeg?w=360&h=300&fit=crop',
     badge: '-14%',
   },
   {
@@ -244,7 +268,7 @@ const flashSaleItems: Product[] = [
     category: 'Groceries',
     price: 'BDT 620',
     oldPrice: 'BDT 730',
-    image: 'https://picsum.photos/seed/pro-rice/360/300',
+    image: 'https://images.pexels.com/photos/2632504/pexels-photo-2632504.jpeg?w=360&h=300&fit=crop',
     badge: '-15%',
   },
   {
@@ -252,7 +276,7 @@ const flashSaleItems: Product[] = [
     category: 'Essentials',
     price: 'BDT 265',
     oldPrice: 'BDT 295',
-    image: 'https://picsum.photos/seed/pro-oil/360/300',
+    image: 'https://images.pexels.com/photos/3814619/pexels-photo-3814619.jpeg?w=360&h=300&fit=crop',
     badge: '-10%',
   },
 ]
@@ -264,7 +288,7 @@ const topSellingProducts = [
     price: '৳1,470',
     oldPrice: '৳1,550',
     save: 'Save ৳80',
-    image: 'https://picsum.photos/seed/top-mustard-oil/420/320',
+    image: 'https://images.pexels.com/photos/3814619/pexels-photo-3814619.jpeg?w=420&h=320&fit=crop',
   },
   {
     name: 'Gawa Ghee 1kg',
@@ -272,7 +296,7 @@ const topSellingProducts = [
     price: '৳1,710',
     oldPrice: '৳1,800',
     save: 'Save ৳90',
-    image: 'https://picsum.photos/seed/top-gawa-ghee/420/320',
+    image: 'https://images.pexels.com/photos/3814619/pexels-photo-3814619.jpeg?w=420&h=320&fit=crop',
   },
   {
     name: 'Sundarban Honey 1kg',
@@ -280,7 +304,7 @@ const topSellingProducts = [
     price: '৳2,200',
     oldPrice: '৳2,500',
     save: 'Save ৳300',
-    image: 'https://picsum.photos/seed/top-sundarban-honey/420/320',
+    image: 'https://images.pexels.com/photos/312418/pexels-photo-312418.jpeg?w=420&h=320&fit=crop',
   },
   {
     name: 'Lachcha Semai 1kg',
@@ -288,7 +312,7 @@ const topSellingProducts = [
     price: '৳1,400',
     oldPrice: '৳1,500',
     save: 'Save ৳100',
-    image: 'https://picsum.photos/seed/top-lachcha-semai/420/320',
+    image: 'https://images.pexels.com/photos/2632504/pexels-photo-2632504.jpeg?w=420&h=320&fit=crop',
   },
 ]
 
@@ -296,12 +320,12 @@ const staticSplitBanners = [
   {
     title: 'Healthy Kitchen Collection',
     subtitle: 'Premium oils, ghee, spices, and pantry essentials.',
-    image: 'https://picsum.photos/seed/static-split-left/1000/520',
+    image: 'https://images.pexels.com/photos/3962286/pexels-photo-3962286.jpeg?w=1000&h=520&fit=crop',
   },
   {
     title: 'Organic and Functional Foods',
     subtitle: 'Honey, dates, nuts, and curated wellness products.',
-    image: 'https://picsum.photos/seed/static-split-right/1000/520',
+    image: 'https://images.pexels.com/photos/5632399/pexels-photo-5632399.jpeg?w=1000&h=520&fit=crop',
   },
 ]
 
@@ -311,138 +335,138 @@ const popularItems: Product[] = [
     category: 'Dairy and Eggs',
     price: 'BDT 155',
     oldPrice: 'BDT 180',
-    image: 'https://picsum.photos/seed/pro-egg/360/300',
+    image: 'https://images.pexels.com/photos/5632399/pexels-photo-5632399.jpeg?w=360&h=300&fit=crop',
   },
   {
     name: 'PRAN UHT Milk 1L',
     category: 'Milk',
     price: 'BDT 108',
     oldPrice: 'BDT 120',
-    image: 'https://picsum.photos/seed/pro-milk/360/300',
+    image: 'https://images.pexels.com/photos/312418/pexels-photo-312418.jpeg?w=360&h=300&fit=crop',
   },
   {
     name: 'ACI Salt 1kg',
     category: 'Essentials',
     price: 'BDT 46',
     oldPrice: 'BDT 52',
-    image: 'https://picsum.photos/seed/pro-salt/360/300',
+    image: 'https://images.pexels.com/photos/1092730/pexels-photo-1092730.jpeg?w=360&h=300&fit=crop',
   },
   {
     name: 'Teer Flour 2kg',
     category: 'Groceries',
     price: 'BDT 168',
     oldPrice: 'BDT 190',
-    image: 'https://picsum.photos/seed/pro-flour/360/300',
+    image: 'https://images.pexels.com/photos/2632504/pexels-photo-2632504.jpeg?w=360&h=300&fit=crop',
   },
   {
     name: 'Orange Juice 1L',
     category: 'Beverages',
     price: 'BDT 148',
     oldPrice: 'BDT 170',
-    image: 'https://picsum.photos/seed/pro-juice/360/300',
+    image: 'https://images.pexels.com/photos/3407857/pexels-photo-3407857.jpeg?w=360&h=300&fit=crop',
   },
   {
     name: 'Body Wash 500ml',
     category: 'Personal Care',
     price: 'BDT 420',
     oldPrice: 'BDT 480',
-    image: 'https://picsum.photos/seed/pro-bodywash/360/300',
+    image: 'https://images.pexels.com/photos/3962286/pexels-photo-3962286.jpeg?w=360&h=300&fit=crop',
   },
   {
     name: 'Organic Honey 250g',
     category: 'Health Food',
     price: 'BDT 370',
     oldPrice: 'BDT 420',
-    image: 'https://picsum.photos/seed/pro-honey/360/300',
+    image: 'https://images.pexels.com/photos/312418/pexels-photo-312418.jpeg?w=360&h=300&fit=crop',
   },
   {
     name: 'Dishwash Liquid 1L',
     category: 'Home Care',
     price: 'BDT 230',
     oldPrice: 'BDT 270',
-    image: 'https://picsum.photos/seed/pro-dishwash/360/300',
+    image: 'https://images.pexels.com/photos/3962286/pexels-photo-3962286.jpeg?w=360&h=300&fit=crop',
   },
   {
     name: 'Basmati Rice 2kg',
     category: 'Groceries',
     price: 'BDT 460',
     oldPrice: 'BDT 520',
-    image: 'https://picsum.photos/seed/pro-basmati/360/300',
+    image: 'https://images.pexels.com/photos/2632504/pexels-photo-2632504.jpeg?w=360&h=300&fit=crop',
   },
   {
     name: 'Potato 1kg',
     category: 'Vegetables',
     price: 'BDT 52',
     oldPrice: 'BDT 65',
-    image: 'https://picsum.photos/seed/pro-potato/360/300',
+    image: 'https://images.pexels.com/photos/1092730/pexels-photo-1092730.jpeg?w=360&h=300&fit=crop',
   },
   {
     name: 'Chicken Broiler 1kg',
     category: 'Fish and Meat',
     price: 'BDT 285',
     oldPrice: 'BDT 320',
-    image: 'https://picsum.photos/seed/pro-chicken/360/300',
+    image: 'https://images.pexels.com/photos/4551832/pexels-photo-4551832.jpeg?w=360&h=300&fit=crop',
   },
   {
     name: 'Frozen Peas 500g',
     category: 'Frozen Food',
     price: 'BDT 165',
     oldPrice: 'BDT 190',
-    image: 'https://picsum.photos/seed/pro-peas/360/300',
+    image: 'https://images.pexels.com/photos/5632399/pexels-photo-5632399.jpeg?w=360&h=300&fit=crop',
   },
   {
     name: 'Banana (12 pcs)',
     category: 'Fruits',
     price: 'BDT 115',
     oldPrice: 'BDT 140',
-    image: 'https://picsum.photos/seed/pro-banana/360/300',
+    image: 'https://images.pexels.com/photos/1092730/pexels-photo-1092730.jpeg?w=360&h=300&fit=crop',
   },
   {
     name: 'Tomato Ketchup 500g',
     category: 'Snacks',
     price: 'BDT 195',
     oldPrice: 'BDT 220',
-    image: 'https://picsum.photos/seed/pro-ketchup/360/300',
+    image: 'https://images.pexels.com/photos/3407857/pexels-photo-3407857.jpeg?w=360&h=300&fit=crop',
   },
   {
     name: 'Shampoo 340ml',
     category: 'Personal Care',
     price: 'BDT 355',
     oldPrice: 'BDT 410',
-    image: 'https://picsum.photos/seed/pro-shampoo/360/300',
+    image: 'https://images.pexels.com/photos/3962286/pexels-photo-3962286.jpeg?w=360&h=300&fit=crop',
   },
   {
     name: 'Mineral Water 1.5L',
     category: 'Beverages',
     price: 'BDT 42',
     oldPrice: 'BDT 50',
-    image: 'https://picsum.photos/seed/pro-water/360/300',
+    image: 'https://images.pexels.com/photos/3407857/pexels-photo-3407857.jpeg?w=360&h=300&fit=crop',
   },
   {
     name: 'Toilet Cleaner 750ml',
     category: 'Home Care',
     price: 'BDT 210',
     oldPrice: 'BDT 250',
-    image: 'https://picsum.photos/seed/pro-cleaner/360/300',
+    image: 'https://images.pexels.com/photos/3962286/pexels-photo-3962286.jpeg?w=360&h=300&fit=crop',
   },
   {
     name: 'Baby Diaper Pack',
     category: 'Baby Care',
     price: 'BDT 720',
     oldPrice: 'BDT 820',
-    image: 'https://picsum.photos/seed/pro-diaper/360/300',
+    image: 'https://images.pexels.com/photos/5632399/pexels-photo-5632399.jpeg?w=360&h=300&fit=crop',
   },
   {
     name: 'Dates Premium 500g',
     category: 'Dry Foods',
     price: 'BDT 590',
     oldPrice: 'BDT 650',
-    image: 'https://picsum.photos/seed/pro-dates/360/300',
+    image: 'https://images.pexels.com/photos/1092730/pexels-photo-1092730.jpeg?w=360&h=300&fit=crop',
     images: [
-      'https://picsum.photos/seed/pro-dates/360/300',
-      'https://picsum.photos/seed/pro-dates-2/360/300',
-      'https://picsum.photos/seed/pro-dates-3/360/300',
-      'https://picsum.photos/seed/pro-dates-4/360/300',
+      'https://images.pexels.com/photos/1092730/pexels-photo-1092730.jpeg?w=360&h=300&fit=crop',
+      'https://images.pexels.com/photos/5632399/pexels-photo-5632399.jpeg?w=360&h=300&fit=crop',
+      'https://images.pexels.com/photos/312418/pexels-photo-312418.jpeg?w=360&h=300&fit=crop',
+      'https://images.pexels.com/photos/2632504/pexels-photo-2632504.jpeg?w=360&h=300&fit=crop',
     ],
     description:
       'Grown in the fertile lands of the Middle East, Ghorer Bazar Medjool Dates are premium-quality, naturally sweet, and delightfully soft. Known as the "King of Dates," Medjool dates are rich in fiber, potassium, and essential nutrients—making them a healthy alternative to refined sugar and an ideal natural energy booster.',
@@ -465,7 +489,7 @@ const popularItems: Product[] = [
     category: 'Vegetables',
     price: 'BDT 36',
     oldPrice: 'BDT 45',
-    image: 'https://picsum.photos/seed/pro-chili/360/300',
+    image: 'https://images.pexels.com/photos/1092730/pexels-photo-1092730.jpeg?w=360&h=300&fit=crop',
   },
 ]
 
