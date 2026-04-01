@@ -78,9 +78,27 @@ const route = useRoute()
 const router = useRouter()
 const fallbackProductImage = '/images/product-fallback.svg'
 
+const setImageLoadingState = (image: HTMLImageElement) => {
+  if (image.complete && image.naturalWidth > 0) {
+    image.dataset.imgState = 'loaded'
+    return
+  }
+
+  image.dataset.imgState = 'loading'
+}
+
+const handleGlobalImageLoad = (event: Event) => {
+  const target = event.target
+  if (!(target instanceof HTMLImageElement)) return
+
+  target.dataset.imgState = 'loaded'
+}
+
 const handleGlobalImageError = (event: Event) => {
   const target = event.target
   if (!(target instanceof HTMLImageElement)) return
+
+  target.dataset.imgState = 'loading'
 
   // Try a stable backup thumbnail first when external product URLs fail.
   if (target.dataset.backupTried !== 'true') {
@@ -198,9 +216,14 @@ onMounted(() => {
   startAutoFlashSale()
   startAutoTopSelling()
   document.addEventListener('visibilitychange', handleVisibilityChange)
+  window.addEventListener('load', handleGlobalImageLoad, true)
   window.addEventListener('error', handleGlobalImageError, true)
   window.addEventListener('scroll', handlePageScroll, { passive: true })
   handlePageScroll()
+
+  document.querySelectorAll<HTMLImageElement>('img').forEach((image) => {
+    setImageLoadingState(image)
+  })
 
   const rawSession = localStorage.getItem(sessionStorageKey)
   if (!rawSession) return
@@ -228,6 +251,7 @@ onUnmounted(() => {
     cartShakeTimer = undefined
   }
   document.removeEventListener('visibilitychange', handleVisibilityChange)
+  window.removeEventListener('load', handleGlobalImageLoad, true)
   window.removeEventListener('error', handleGlobalImageError, true)
   window.removeEventListener('scroll', handlePageScroll)
 })
@@ -2546,6 +2570,17 @@ const topSellingThumb = 'h-52 w-full object-cover transition duration-300 group-
 </template>
 
 <style scoped>
+:deep(img) {
+  background: linear-gradient(90deg, #e2e8f0 25%, #f1f5f9 50%, #e2e8f0 75%);
+  background-size: 220% 100%;
+  animation: imageSkeletonShimmer 1.2s linear infinite;
+}
+
+:deep(img[data-img-state='loaded']) {
+  background: none;
+  animation: none;
+}
+
 .cart-tab-shake {
   animation: cartTabShake 0.52s ease;
 }
@@ -2619,6 +2654,16 @@ const topSellingThumb = 'h-52 w-full object-cover transition duration-300 group-
 
   to {
     transform: translateX(-50%) translateY(0) scale(1);
+  }
+}
+
+@keyframes imageSkeletonShimmer {
+  from {
+    background-position: 220% 0;
+  }
+
+  to {
+    background-position: -220% 0;
   }
 }
 </style>
